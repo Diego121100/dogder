@@ -27,6 +27,8 @@ import {
 import { useLocationWatch } from '@/lib/location';
 import { fonts, useColors } from '@/theme';
 
+type MatchInfo = { id: string; nombre: string; foto?: string; superRecibido?: boolean; superEnviado?: boolean };
+
 /** Descubrir: las tarjetas de perros cercanos para deslizar. */
 export default function Discover() {
   const c = useColors();
@@ -40,7 +42,7 @@ export default function Discover() {
   const [mine, setMine] = useState<MyDog | null>(null);
   const [superSent, setSuperSent] = useState<string | null>(null);
   const [superReceived, setSuperReceived] = useState<string | null>(null);
-  const [match, setMatch] = useState<{ id: string; nombre: string; foto?: string } | null>(null);
+  const [match, setMatch] = useState<MatchInfo | null>(null);
 
   useLocationWatch(true);
 
@@ -77,7 +79,7 @@ export default function Discover() {
 
   const superExhausted = () => !!superAt && superAt > new Date();
 
-  const matchAfterSuper = useRef<{ id: string; nombre: string; foto?: string } | null>(null);
+  const matchAfterSuper = useRef<MatchInfo | null>(null);
   const clearSuperSent = useCallback(() => {
     setSuperSent(null);
     if (matchAfterSuper.current) {
@@ -125,7 +127,9 @@ export default function Discover() {
       return;
     }
     if (kind === 'super') setSuperAt(new Date(Date.now() + 24 * 3600_000));
-    const m = r.matchId ? { id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0] } : null;
+    const m = r.matchId
+      ? { id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0], superRecibido: dog.te_dio_super, superEnviado: kind === 'super' }
+      : null;
     if (kind === 'super') {
       // Primero "¡Mandaste un súper hueso!"; si además hubo match, aparece después.
       matchAfterSuper.current = m;
