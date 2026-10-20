@@ -1,0 +1,138 @@
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, useFocusEffect } from 'expo-router';
+import { Image } from 'expo-image';
+import { Button } from '@/components/ui';
+import { listMatches, MatchRow, myUserId, shortTime, useRealtime } from '@/lib/chat';
+import { photoUrl } from '@/lib/photos';
+import { fonts, useColors } from '@/theme';
+
+/** Matches: arriba los nuevos (sin mensajes), abajo las conversaciones. */
+export default function Matches() {
+  const c = useColors();
+  const [rows, setRows] = useState<MatchRow[]>([]);
+  const [me, setMe] = useState<string | null>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(() => {
+    Promise.all([listMatches(), myUserId()])
+      .then(([r, id]) => {
+        setRows(r);
+        setMe(id);
+        setStatus('ready');
+      })
+      .catch(() => setStatus('error'))
+      .finally(() => setRefreshing(false));
+  }, []);
+
+  useFocusEffect(load);
+  useRealtime(load);
+
+  const fresh = rows.filter((r) => !r.ultimo_texto);
+  const convos = rows.filter((r) => r.ultimo_texto);
+  const open = (r: MatchRow) => router.push({ pathname: '/chat/[id]', params: { id: r.match_id } });
+
+  const avatar = (foto: string | null, size: number, ring?: string) => (
+    <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: c.surface,
+      borderWidth: ring ? 3 : 0, borderColor: ring }}>
+      {foto ? <Image source={{ uri: photoUrl(foto) }} style={StyleSheet.absoluteFill} contentFit="cover" /> : null}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top']}>
+      <Text style={[styles.title, { color: c.ink }]} accessibilityRole="header">Matches</Text>
+
+      {status === 'loading' && <ActivityIndicator color={c.ink} style={{ marginTop: 40 }} />}
+      {status === 'error' && (
+        <View style={styles.empty}>
+          <Text style={[styles.hint, { color: c.muted }]}>No pudimos cargar tus matches. Revisa tu conexión a internet.</Text>
+          <Button title="Intentar de nuevo" onPress={load} />
+        </View>
+      )}
+      {status === 'ready' && rows.length === 0 && (
+        <View style={styles.empty}>
+          <Text style={[styles.emptyTitle, { color: c.ink }]}>Todavía no tienes matches</Text>
+          <Text style={[styles.hint, { color: c.muted }]}>
+            Da me gusta a los perros que te gusten en Descubrir. Si a su dueño también le gusta tu perro, aparecerán aquí
+            para que platiquen y organicen un paseo.
+          </Text>
+          <Button title="Ir a Descubrir" variant="secondary" onPress={() => router.navigate('/descubrir')} />
+        </View>
+      )}
+
+      {status === 'ready' && rows.length > 0 && (
+        <FlatList
+          data={convos}
+          keyExtractor={(r) => r.match_id}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={c.ink} />}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+          ListHeaderComponent={
+            <>
+              {fresh.length > 0 && (
+                <>
+                  <Text style={[styles.label, { color: c.muted }]}>Nuevos · {fresh.length}</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
+                    {fresh.map((r) => (
+                      <Pressable key={r.match_id} onPress={() => open(r)} accessibilityRole="button"
+                        accessibilityLabel={`Nuevo match: ${r.nombre}. Toca para enviarle un mensaje`} style={styles.fresh}>
+                        {avatar(r.foto, 72, c.ball)}
+                        <Text style={[styles.freshName, { color: c.ink }]} numberOfLines={1}>{r.nombre}</Text>
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+              <Text style={[styles.label, { color: c.muted }]}>Mensajes</Text>
+              {convos.length === 0 && (
+                <Text style={[styles.hint, { color: c.muted }]}>Toca un match nuevo para empezar la conversación.</Text>
+              )}
+            </>
+          }
+          renderItem={({ item: r }) => (
+            <Pressable onPress={() => open(r)} accessibilityRole="button"
+              accessibilityLabel={`${r.nombre}, con ${r.dueno_nombre}. ${r.sin_leer ? `${r.sin_leer} mensajes sin leer` : ''}`}
+              style={({ pressed }) => [styles.row, { borderBottomColor: c.line, opacity: pressed ? 0.7 : 1 }]}>
+              {avatar(r.foto, 56)}
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+                  <Text style={[styles.name, { color: c.ink }]} numberOfLines={1}>
+                    {r.nombre} <Text style={{ fontFamily: fonts.bodySemi, color: c.muted }}>· {r.dueno_nombre}</Text>
+                  </Text>
+                  {r.ultimo_creado && <Text style={[styles.time, { color: c.muted }]}>{shortTime(r.ultimo_creado)}</Text>}
+                </View>
+                <Text style={[styles.last, { color: r.sin_leer ? c.ink : c.muted, fontFamily: r.sin_leer ? fonts.bodyBold : fonts.body }]}
+                  numberOfLines={1}>
+                  {r.ultimo_autor === me ? 'Tú: ' : ''}{r.ultimo_texto}
+                </Text>
+              </View>
+              {r.sin_leer > 0 && (
+                <View style={[styles.unread, { backgroundColor: c.coral }]}>
+                  <Text style={styles.unreadText}>{r.sin_leer}</Text>
+                </View>
+              )}
+            </Pressable>
+          )}
+        />
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  title: { fontFamily: fonts.display, fontSize: 28, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  label: { fontFamily: fonts.bodyBold, fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', marginTop: 16, marginBottom: 10 },
+  fresh: { width: 78, alignItems: 'center', gap: 5 },
+  freshName: { fontFamily: fonts.bodyBold, fontSize: 13 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  name: { fontFamily: fonts.bodyBold, fontSize: 16, flexShrink: 1 },
+  time: { fontFamily: fonts.body, fontSize: 12.5 },
+  last: { fontSize: 14.5, marginTop: 2 },
+  unread: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  unreadText: { color: '#FFFFFF', fontFamily: fonts.bodyBold, fontSize: 12 },
+  empty: { flex: 1, padding: 24, gap: 14, justifyContent: 'center' },
+  emptyTitle: { fontFamily: fonts.display, fontSize: 22 },
+  hint: { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+});

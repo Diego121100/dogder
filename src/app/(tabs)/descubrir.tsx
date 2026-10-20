@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import Svg, { Circle, Path } from 'react-native-svg';
 import { Button, Logo } from '@/components/ui';
 import { SwipeCard, SwipeCardHandle } from '@/components/SwipeCard';
 import { ActionBar } from '@/components/ActionBar';
@@ -23,14 +22,11 @@ import {
   waitLabel,
 } from '@/lib/discover';
 import { useLocationWatch } from '@/lib/location';
-import { supabase } from '@/lib/supabase';
-import { useSignup } from '@/lib/signup';
 import { fonts, useColors } from '@/theme';
 
 /** Descubrir: las tarjetas de perros cercanos para deslizar. */
 export default function Discover() {
   const c = useColors();
-  const { reset } = useSignup();
   const toast = useToast();
   const top = useRef<SwipeCardHandle>(null);
 
@@ -39,7 +35,7 @@ export default function Discover() {
   const [history, setHistory] = useState<{ dog: NearbyDog; kind: SwipeKind }[]>([]);
   const [superAt, setSuperAt] = useState<Date | null>(null);
   const [mine, setMine] = useState<MyDog | null>(null);
-  const [match, setMatch] = useState<{ nombre: string; foto?: string } | null>(null);
+  const [match, setMatch] = useState<{ id: string; nombre: string; foto?: string } | null>(null);
 
   useLocationWatch(true);
 
@@ -92,7 +88,7 @@ export default function Discover() {
       return;
     }
     if (kind === 'super') setSuperAt(new Date(Date.now() + 24 * 3600_000));
-    if (r.matchId) setMatch({ nombre: dog.nombre, foto: dog.fotos[0] });
+    if (r.matchId) setMatch({ id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0] });
   }
 
   // Se llama cuando la tarjeta de arriba terminó de salir de la pantalla.
@@ -156,35 +152,14 @@ export default function Discover() {
     }, [queue]),
   );
 
-  function account() {
-    Alert.alert('Tu cuenta', 'Mi perro y la configuración de la cuenta llegan pronto.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Cerrar sesión',
-        style: 'destructive',
-        onPress: async () => {
-          await supabase.auth.signOut();
-          reset();
-          router.replace('/');
-        },
-      },
-    ]);
-  }
-
   const visible = queue.slice(0, 2).reverse(); // la de abajo primero, la de arriba al final
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top']}>
       <View style={styles.header}>
         <View style={{ width: 40 }} />
         <Logo />
-        <Pressable onPress={account} accessibilityRole="button" accessibilityLabel="Tu cuenta" hitSlop={8}
-          style={[styles.iconBtn, { backgroundColor: c.surface, borderColor: c.line }]}>
-          <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke={c.ink} strokeWidth={2.2}>
-            <Circle cx={12} cy={8} r={4} />
-            <Path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" />
-          </Svg>
-        </Pressable>
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.deck}>
@@ -252,8 +227,9 @@ export default function Discover() {
         other={match}
         onClose={() => setMatch(null)}
         onMessage={() => {
+          const id = match?.id;
           setMatch(null);
-          toast.show('El chat llega en el siguiente paso.');
+          if (id) router.push({ pathname: '/chat/[id]', params: { id } });
         }}
       />
     </SafeAreaView>
@@ -262,7 +238,6 @@ export default function Discover() {
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
-  iconBtn: { width: 40, height: 40, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   deck: { flex: 1, marginHorizontal: 16, marginTop: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   ball: { width: 64, height: 64, borderRadius: 32 },

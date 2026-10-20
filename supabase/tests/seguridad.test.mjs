@@ -104,6 +104,14 @@ ok((await as(B, `select * from mensajes`)).rows.length === 1, 'Mariana lee el me
 ok((await as(D, `select * from mensajes`)).rows.length === 0, 'Otra persona no puede leer la conversación');
 ok(await fails_(D, `insert into mensajes (match_id, autor_id, texto) values ('${m.match_id}', '${D}', 'intruso')`), 'Otra persona no puede escribir en la conversación');
 ok(await fails_(A, `insert into mensajes (match_id, autor_id, texto) values ('${m.match_id}', '${B}', 'suplantación')`), 'Nadie puede enviar mensajes a nombre de otro');
+let mb = (await as(B, `select * from mis_matches()`)).rows[0];
+ok(mb && mb.sin_leer === 1, 'Mariana ve 1 mensaje sin leer');
+ok((await as(A, `select * from mis_matches()`)).rows[0].sin_leer === 0, 'Los mensajes propios no cuentan como sin leer');
+await as(B, `select marcar_leido($1)`, [m.match_id]);
+mb = (await as(B, `select * from mis_matches()`)).rows[0];
+ok(mb.sin_leer === 0, 'Al abrir la conversación, se marca como leída');
+await as(D, `select marcar_leido($1)`, [m.match_id]);
+ok((await db.query(`select count(*)::int c from match_lecturas where usuario = $1`, [D])).rows[0].c === 0, 'Otra persona no puede marcar como leída una conversación ajena');
 
 // Reporte y bloqueo
 await as(A, `insert into reportes (reportador, reportado, motivo) values ($1, $2, 'Perfil falso o spam')`, [A, D]);

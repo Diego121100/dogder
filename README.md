@@ -10,17 +10,19 @@ Hecha con **Expo (React Native)** y **Supabase**.
   4) ubicación obligatoria (redondeada a ~500 m).
 - Descubrir: tarjetas para deslizar, Volver, Rechazar, Súper hueso (1 cada 24 h) y Me gusta, pantalla de match
   y perfil completo al tocar la tarjeta.
+- Matches y chat en tiempo real, con mensajes sin leer y la pestaña de Matches con su contador.
 - Términos y Condiciones, Aviso de Privacidad y Normas de la comunidad.
 - La base de datos en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros, fotos, likes,
   súper hueso, matches, chat, bloqueos, reportes y eliminar cuenta, y 31 pruebas en `supabase/tests/`.
 
-Siguen: filtros, Matches, chat, Mi perro, reportar y bloquear, eliminar cuenta.
+Siguen: filtros, Mi perro (editar perfil), reportar y bloquear, eliminar cuenta.
 
 ## Perros de prueba
 
 Para tener tarjetas que deslizar mientras no hay más usuarios, ejecuta en el SQL Editor de Supabase
 `supabase/seed/perros_de_prueba.sql`: crea 9 perros falsos alrededor de tu ubicación (4 ya le dieron
-me gusta a tu perro). Para quitarlos, ejecuta `supabase/seed/borrar_perros_de_prueba.sql`.
+me gusta a tu perro). Si además ejecutas `supabase/seed/respuestas_de_prueba.sql`, los dueños de prueba
+contestan solos en el chat. Para quitarlo todo, ejecuta `supabase/seed/borrar_perros_de_prueba.sql`.
 
 ## Probar la app en tu celular
 
