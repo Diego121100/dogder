@@ -41,6 +41,8 @@ export default function RootLayout() {
             <Stack.Screen name="ubicacion" options={{ gestureEnabled: false }} />
             <Stack.Screen name="registro/listo" options={{ gestureEnabled: false }} />
             <Stack.Screen name="inicio" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="descubrir" options={{ gestureEnabled: false, animation: 'fade' }} />
+            <Stack.Screen name="perro/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />
           </Stack>
         </SignupProvider>

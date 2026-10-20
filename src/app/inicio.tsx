@@ -6,7 +6,7 @@ import { Button, DemoBanner, Lead, Logo, Screen, Title } from '@/components/ui';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { useSignup } from '@/lib/signup';
 import { hasDog } from '@/lib/dog';
-import { hasLocationPermission, hasSavedLocation, useLocationWatch } from '@/lib/location';
+import { hasLocationPermission, hasSavedLocation } from '@/lib/location';
 import { photoUrl } from '@/lib/photos';
 import { fonts, radius, useColors } from '@/theme';
 
@@ -15,7 +15,7 @@ type Dog = { nombre: string; raza: string; foto?: string };
 /**
  * Pantalla temporal después del registro o del inicio de sesión.
  * Si el perfil del perro no está completo, manda al paso 3.
- * Si falta la ubicación, manda a pedirla. Aquí irá Descubrir.
+ * Si falta la ubicación, manda a pedirla; si todo está listo, abre Descubrir.
  */
 export default function Home() {
   const c = useColors();
@@ -51,12 +51,10 @@ export default function Home() {
     })();
   }, []);
 
-  // Mientras la app está abierta, la ubicación se actualiza sola.
-  useLocationWatch(state === 'ready' && supabaseConfigured);
-
   if (state === 'loading') return null;
   if (state === 'needsLocation') return <Redirect href="/ubicacion" />;
   if (state === 'needsDog') return <Redirect href="/registro/perro" />;
+  if (state === 'ready' && supabaseConfigured) return <Redirect href="/descubrir" />;
 
   async function logout() {
     if (supabaseConfigured) await supabase.auth.signOut();

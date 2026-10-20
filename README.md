@@ -5,13 +5,22 @@ Hecha con **Expo (React Native)** y **Supabase**.
 
 ## Qué hay hasta ahora
 
-- Bienvenida, inicio de sesión y registro paso 1 (tu cuenta) y paso 2 (código de 6 dígitos por correo).
+- Bienvenida e inicio de sesión.
+- Registro completo: 1) tu cuenta, 2) código de 6 dígitos por correo, 3) perfil del perro con 2 a 6 fotos,
+  4) ubicación obligatoria (redondeada a ~500 m).
+- Descubrir: tarjetas para deslizar, Volver, Rechazar, Súper hueso (1 cada 24 h) y Me gusta, pantalla de match
+  y perfil completo al tocar la tarjeta.
 - Términos y Condiciones, Aviso de Privacidad y Normas de la comunidad.
-- La base de datos completa en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros,
-  fotos, likes, súper hueso cada 24 horas, matches, chat, bloqueos, reportes y eliminar cuenta.
-- 31 pruebas automáticas de esas reglas en `supabase/tests/`.
+- La base de datos en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros, fotos, likes,
+  súper hueso, matches, chat, bloqueos, reportes y eliminar cuenta, y 31 pruebas en `supabase/tests/`.
 
-Siguen: paso 3 (tu perro), paso 4 (ubicación), Descubrir, Matches, chat y Mi perro.
+Siguen: filtros, Matches, chat, Mi perro, reportar y bloquear, eliminar cuenta.
+
+## Perros de prueba
+
+Para tener tarjetas que deslizar mientras no hay más usuarios, ejecuta en el SQL Editor de Supabase
+`supabase/seed/perros_de_prueba.sql`: crea 9 perros falsos alrededor de tu ubicación (4 ya le dieron
+me gusta a tu perro). Para quitarlos, ejecuta `supabase/seed/borrar_perros_de_prueba.sql`.
 
 ## Probar la app en tu celular
 

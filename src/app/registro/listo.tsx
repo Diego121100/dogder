@@ -46,7 +46,7 @@ export default function SignupDone() {
           : 'Tu perfil ya está listo.'}
       </Lead>
       <View style={{ flex: 1 }} />
-      <Button title="Empezar a descubrir" onPress={() => router.replace('/inicio')} />
+      <Button title="Empezar a descubrir" onPress={() => router.replace('/descubrir')} />
     </Screen>
   );
 }
