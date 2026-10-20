@@ -42,7 +42,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test:db": "node supabase/tests/seguridad.test.mjs supabase/migrations/20261020000000_dogder.sql"
+    "test:db": "node supabase/tests/seguridad.test.mjs supabase/migrations/*.sql"
   },
   "private": true
 }

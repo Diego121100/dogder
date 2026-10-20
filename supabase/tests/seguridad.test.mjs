@@ -3,7 +3,7 @@ import { PGlite } from '@electric-sql/pglite';
 import fs from 'node:fs';
 
 const db = new PGlite();
-const migration = fs.readFileSync(process.argv[2], 'utf8');
+const migrations = process.argv.slice(2).map((f) => fs.readFileSync(f, 'utf8'));
 
 await db.exec(`
   create role authenticated nologin; create role anon nologin;
@@ -21,8 +21,8 @@ await db.exec(`
   grant execute on function auth.uid() to authenticated, anon;
   alter default privileges in schema public grant all on tables to authenticated, anon;
 `);
-await db.exec(migration);
-console.log('✓ La migración se aplica sin errores');
+for (const m of migrations) await db.exec(m);
+console.log(`✓ Las ${migrations.length} migraciones se aplican sin errores`);
 
 const A = '11111111-1111-1111-1111-111111111111';
 const B = '22222222-2222-2222-2222-222222222222';
@@ -63,7 +63,20 @@ ok(await fails_(A, `update perfiles set lat = 0 where id = '${A}'`), 'La ubicaci
 ok((await as(A, `select * from perfiles`)).rows.length === 1, 'Cada quien solo puede leer su propio perfil');
 
 const cerca = await as(A, `select * from perros_cercanos(10)`);
-ok(cerca.rows.length === 2, `Descubrir muestra a los otros 2 perros cercanos (${cerca.rows.map(r => r.nombre + ' a ' + r.distancia_km + ' km').join(', ')})`);
+ok(cerca.rows.length === 2, `Descubrir muestra a los otros 2 perros cercanos (${cerca.rows.map(r => r.nombre + ': ' + r.cercania + ' ' + r.distancia_km + ' km').join(', ')})`);
+ok(cerca.rows.every(r => r.cercania === 'km' && r.distancia_km >= 1), 'A más de 1 km se muestra en kilómetros enteros');
+// Un vecino en la misma cuadra que Diego aparece como "Muy cerca de ti"
+const E = '55555555-5555-5555-5555-555555555555';
+await db.query('insert into auth.users values ($1, $2)', [E, meta('Vecina', '1990-01-01')]);
+const pe = (await as(E, `insert into perros (dueno_id, nombre, edad, raza, tamano, energia) values ($1, 'Lola', 2, 'Pug (Carlino)', 'Chico', 2) returning id`, [E])).rows[0].id;
+await as(E, `insert into fotos (perro_id, ruta, orden) values ($1, 'x/1.jpg', 0), ($1, 'x/2.jpg', 1)`, [pe]);
+await as(E, `select actualizar_ubicacion(19.4201, -99.1599)`);
+const lola = (await as(A, `select * from perros_cercanos(10)`)).rows.find(r => r.perro_id === pe);
+ok(lola && lola.cercania === 'muy_cerca', 'Un perro a menos de 500 m aparece como "Muy cerca de ti"');
+await as(E, `select actualizar_ubicacion(19.4260, -99.1600)`);
+const lola2 = (await as(A, `select * from perros_cercanos(10)`)).rows.find(r => r.perro_id === pe);
+ok(lola2 && lola2.cercania === 'menos_1km', 'Un perro entre 500 m y 1 km aparece como "A menos de 1 km"');
+await db.query('delete from auth.users where id = $1', [E]);
 ok(!('lat' in (cerca.rows[0] ?? {})) && !('lng' in (cerca.rows[0] ?? {})), 'Descubrir no devuelve coordenadas de nadie');
 ok((await as(A, `select * from perros_cercanos(3)`)).rows.every(r => r.distancia_km <= 3), 'El filtro de distancia funciona');
 ok((await as(A, `select * from perros_cercanos(10, array['Chico'])`)).rows.length === 0, 'El filtro de tamaño funciona');

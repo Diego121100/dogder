@@ -9,7 +9,7 @@ Hecha con **Expo (React Native)** y **Supabase**.
 - Términos y Condiciones, Aviso de Privacidad y Normas de la comunidad.
 - La base de datos completa en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros,
   fotos, likes, súper hueso cada 24 horas, matches, chat, bloqueos, reportes y eliminar cuenta.
-- 28 pruebas automáticas de esas reglas en `supabase/tests/`.
+- 31 pruebas automáticas de esas reglas en `supabase/tests/`.
 
 Siguen: paso 3 (tu perro), paso 4 (ubicación), Descubrir, Matches, chat y Mi perro.
 
@@ -29,7 +29,8 @@ de verificación es `000000`, pero no se crea ninguna cuenta.
 ## Conectar Supabase
 
 1. Crea un proyecto en [supabase.com](https://supabase.com) (región sugerida: la más cercana a México).
-2. En **SQL Editor > New query**, pega todo el archivo `supabase/migrations/20261020000000_dogder.sql` y pulsa **Run**.
+2. En **SQL Editor > New query**, pega y ejecuta (**Run**) cada archivo de `supabase/migrations/`, en orden por nombre.
+   Truco en Mac: `pbcopy < supabase/migrations/<archivo>.sql` lo copia completo.
 3. En **Authentication > Email Templates > Confirm signup**, cambia el contenido para que el correo
    muestre el código en lugar de un enlace, por ejemplo:
    ```
