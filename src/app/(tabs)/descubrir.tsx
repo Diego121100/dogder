@@ -77,7 +77,14 @@ export default function Discover() {
 
   const superExhausted = () => !!superAt && superAt > new Date();
 
-  const clearSuperSent = useCallback(() => setSuperSent(null), []);
+  const matchAfterSuper = useRef<{ id: string; nombre: string; foto?: string } | null>(null);
+  const clearSuperSent = useCallback(() => {
+    setSuperSent(null);
+    if (matchAfterSuper.current) {
+      setMatch(matchAfterSuper.current);
+      matchAfterSuper.current = null;
+    }
+  }, []);
   const clearSuperReceived = useCallback(() => setSuperReceived(null), []);
 
   // Si alguien le manda un súper hueso a mi perro mientras la app está abierta, se avisa
@@ -118,8 +125,14 @@ export default function Discover() {
       return;
     }
     if (kind === 'super') setSuperAt(new Date(Date.now() + 24 * 3600_000));
-    if (r.matchId) setMatch({ id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0] });
-    else if (kind === 'super') setSuperSent(dog.nombre);
+    const m = r.matchId ? { id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0] } : null;
+    if (kind === 'super') {
+      // Primero "¡Mandaste un súper hueso!"; si además hubo match, aparece después.
+      matchAfterSuper.current = m;
+      setSuperSent(dog.nombre);
+    } else if (m) {
+      setMatch(m);
+    }
   }
 
   // Se llama cuando la tarjeta de arriba terminó de salir de la pantalla.
