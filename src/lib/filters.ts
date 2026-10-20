@@ -7,7 +7,10 @@ export function loadFilters(): Filters {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
     if (!raw) return DEFAULT_FILTERS;
-    return { ...DEFAULT_FILTERS, ...(JSON.parse(raw) as Partial<Filters>) };
+    const f = { ...DEFAULT_FILTERS, ...(JSON.parse(raw) as Partial<Filters>) };
+    // Las distancias que ya no existen pasan a la más cercana de la lista.
+    if (!DISTANCES.some((d) => d.km === f.maxKm)) f.maxKm = f.maxKm > 10 ? FAR_KM : DEFAULT_FILTERS.maxKm;
+    return f;
   } catch {
     return DEFAULT_FILTERS;
   }
@@ -33,7 +36,15 @@ export function activeFilters(f: Filters): number {
   );
 }
 
-export const DISTANCES = [1, 3, 5, 10, 20, 50];
+/** "20+ km" busca hasta el máximo que permite el servidor (50 km). */
+export const FAR_KM = 50;
+export const DISTANCES = [
+  { km: 1, t: '1 km' },
+  { km: 3, t: '3 km' },
+  { km: 5, t: '5 km' },
+  { km: 10, t: '10 km' },
+  { km: FAR_KM, t: '20+ km' },
+];
 export const AGE_GROUPS = [
   { k: 'Cachorro', t: '0–1 años' },
   { k: 'Joven', t: '2–3 años' },

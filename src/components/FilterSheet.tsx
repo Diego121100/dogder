@@ -74,7 +74,7 @@ export function FilterSheet({
           <View style={styles.group}>
             <Label>Distancia máxima</Label>
             <View style={styles.wrap}>
-              {DISTANCES.map((km) => chip(`${km} km`, f.maxKm === km, () => setF({ ...f, maxKm: km })))}
+              {DISTANCES.map((d) => chip(d.t, f.maxKm === d.km, () => setF({ ...f, maxKm: d.km })))}
             </View>
           </View>
 
@@ -102,9 +102,9 @@ export function FilterSheet({
           <View style={styles.group}>
             <Label>Edad</Label>
             <View style={styles.wrap}>
+              {chip('Todas', f.ages.length === 0, () => setF({ ...f, ages: [] }))}
               {AGE_GROUPS.map((a) => chip(a.k, f.ages.includes(a.k), () => setF({ ...f, ages: toggle(f.ages, a.k) }), a.t))}
             </View>
-            <Text style={[styles.help, { color: c.muted }]}>Sin elegir ninguna, se muestran todas las edades.</Text>
           </View>
 
           <View style={styles.group}>
@@ -156,7 +156,6 @@ const styles = StyleSheet.create({
   chip: { borderWidth: 1.5, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 8, alignItems: 'center' },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 14 },
   chipSub: { fontFamily: fonts.body, fontSize: 11 },
-  help: { fontFamily: fonts.body, fontSize: 12.5 },
   tag: { borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6 },
   tagText: { fontFamily: fonts.bodyBold, fontSize: 13 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 6, borderTopWidth: StyleSheet.hairlineWidth },
