@@ -91,6 +91,12 @@ export default function DogProfile() {
               {dog.colonia} · {distanceLabel(dog.cercania, dog.distancia_km)}
             </Text>
           </View>
+          {dog.te_dio_super && (
+            <View style={[styles.superTag, { backgroundColor: c.sky }]}>
+              <BoneIcon color="#FFFFFF" size={16} />
+              <Text style={styles.superTagText}>{dog.nombre} te mandó un súper hueso</Text>
+            </View>
+          )}
           <View style={styles.chips}>
             {[dog.sexo ? sexLabel(dog.sexo) : null, dog.raza, dog.tamano, ageGroup(dog.edad)]
               .filter((t): t is string => !!t)
@@ -171,6 +177,8 @@ const styles = StyleSheet.create({
   age: { fontFamily: fonts.displaySemi, fontSize: 26 },
   sub: { fontFamily: fonts.bodyBold, fontSize: 14.5, marginTop: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  superTag: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  superTagText: { color: '#FFFFFF', fontFamily: fonts.bodyBold, fontSize: 13.5 },
   chip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 6 },
   chipText: { fontFamily: fonts.bodyBold, fontSize: 13 },
   section: { gap: 8 },

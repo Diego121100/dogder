@@ -92,9 +92,15 @@ const s1 = (await as(A, `select dar_like($1, 'super') r`, [perros[B]])).rows[0].
 ok(s1.ok && !s1.match_id, 'Súper hueso a Canela: todavía sin match');
 const s2 = (await as(A, `select dar_like($1, 'super') r`, [perros[D]])).rows[0].r;
 ok(!s2.ok && s2.motivo === 'super_agotado', 'Un segundo súper hueso en menos de 24 horas se rechaza');
+const recibidos = (await as(B, `select * from likes`)).rows;
+ok(recibidos.length === 1 && recibidos[0].tipo === 'super', 'Mariana ve el súper hueso que recibió');
+const primero = (await as(B, `select * from perros_cercanos(10)`)).rows[0];
+ok(primero && primero.perro_id === perros[A] && primero.te_dio_super === true, 'Quien te mandó súper hueso sale primero y destacado en Descubrir');
 ok((await as(A, `select * from perros_cercanos(10)`)).rows.every(r => r.perro_id !== perros[B]), 'Un perro ya deslizado no vuelve a salir en Descubrir');
 const m = (await as(B, `select dar_like($1, 'like') r`, [perros[A]])).rows[0].r;
 ok(m.ok && m.match_id, 'Canela da me gusta a Floki: ¡match!');
+await as(D, `select dar_like($1, 'like')`, [perros[A]]);
+ok((await as(A, `select * from likes where de_perro = $1`, [perros[D]])).rows.length === 0, 'Los me gusta normales siguen siendo secretos');
 ok((await as(A, `select * from mis_matches()`)).rows.length === 1, 'Floki ve su match en Matches');
 ok((await as(D, `select * from matches`)).rows.length === 0, 'Otra persona no puede ver ese match');
 

@@ -4,14 +4,25 @@ import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
 import { BoneIcon } from './ActionBar';
 import { fonts, useColors } from '@/theme';
 
-/** Aviso al mandar un súper hueso: aparece en el centro y se va solo. */
-export function SuperSent({ dogName, onDone }: { dogName: string | null; onDone: () => void }) {
+/**
+ * Aviso de súper hueso en el centro de la pantalla; se va solo.
+ * "sent": lo mandaste tú. "received": alguien te lo mandó.
+ */
+export function SuperSent({
+  dogName,
+  onDone,
+  variant = 'sent',
+}: {
+  dogName: string | null;
+  onDone: () => void;
+  variant?: 'sent' | 'received';
+}) {
   const c = useColors();
   useEffect(() => {
     if (!dogName) return;
-    const t = setTimeout(onDone, 2200);
+    const t = setTimeout(onDone, variant === 'sent' ? 2200 : 3200);
     return () => clearTimeout(t);
-  }, [dogName, onDone]);
+  }, [dogName, onDone, variant]);
 
   if (!dogName) return null;
   return (
@@ -21,9 +32,13 @@ export function SuperSent({ dogName, onDone }: { dogName: string | null; onDone:
         <View style={[styles.circle, { backgroundColor: c.sky }]}>
           <BoneIcon color="#FFFFFF" size={44} />
         </View>
-        <Text style={[styles.title, { color: c.ink }]}>¡Mandaste un súper hueso!</Text>
+        <Text style={[styles.title, { color: c.ink }]}>
+          {variant === 'sent' ? '¡Mandaste un súper hueso!' : `¡${dogName} te mandó un súper hueso!`}
+        </Text>
         <Text style={[styles.text, { color: c.muted }]}>
-          Le mandaste un súper hueso a {dogName}. Su dueño verá que te encantó.
+          {variant === 'sent'
+            ? `Le mandaste un súper hueso a ${dogName}. Su dueño verá que te encantó.`
+            : `A ${dogName} le encantó tu perro. Te aparecerá primero en Descubrir.`}
         </Text>
       </Animated.View>
     </Animated.View>

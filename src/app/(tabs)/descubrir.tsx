@@ -10,10 +10,12 @@ import { AskSexModal } from '@/components/AskSexModal';
 import { SuperSent } from '@/components/SuperSent';
 import { Toast, useToast } from '@/components/Toast';
 import {
+  dogName,
   fetchNearby,
   myDogSummary,
   MyDog,
   NearbyDog,
+  onSuperReceived,
   sendSwipe,
   setMyDogSex,
   superAvailableAt,
@@ -37,6 +39,7 @@ export default function Discover() {
   const [superAt, setSuperAt] = useState<Date | null>(null);
   const [mine, setMine] = useState<MyDog | null>(null);
   const [superSent, setSuperSent] = useState<string | null>(null);
+  const [superReceived, setSuperReceived] = useState<string | null>(null);
   const [match, setMatch] = useState<{ id: string; nombre: string; foto?: string } | null>(null);
 
   useLocationWatch(true);
@@ -75,6 +78,29 @@ export default function Discover() {
   const superExhausted = () => !!superAt && superAt > new Date();
 
   const clearSuperSent = useCallback(() => setSuperSent(null), []);
+  const clearSuperReceived = useCallback(() => setSuperReceived(null), []);
+
+  // Si alguien le manda un súper hueso a mi perro mientras la app está abierta, se avisa
+  // y ese perro se pone como la siguiente tarjeta.
+  const myDogId = mine?.id;
+  useEffect(() => {
+    if (!myDogId) return;
+    return onSuperReceived(myDogId, async (fromId) => {
+      const name = await dogName(fromId);
+      if (name) setSuperReceived(name);
+      try {
+        const dogs = await fetchNearby();
+        const d = dogs.find((x) => x.perro_id === fromId);
+        if (!d) return;
+        setQueue((q) => {
+          const rest = q.filter((x) => x.perro_id !== fromId);
+          return rest.length ? [rest[0], d, ...rest.slice(1)] : [d];
+        });
+      } catch {
+        // Sin internet: aparecerá la próxima vez que se carguen perros.
+      }
+    });
+  }, [myDogId]);
 
   // Guarda la decisión en el servidor y muestra el match si lo hubo.
   async function commit(dog: NearbyDog, kind: SwipeKind) {
@@ -227,6 +253,7 @@ export default function Discover() {
         }}
       />
       <SuperSent dogName={superSent} onDone={clearSuperSent} />
+      <SuperSent dogName={superReceived} onDone={clearSuperReceived} variant="received" />
       <Toast message={toast.message} />
       <MatchModal
         mine={mine}

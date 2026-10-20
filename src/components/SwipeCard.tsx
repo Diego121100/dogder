@@ -14,6 +14,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { NearbyDog, SwipeKind } from '@/lib/discover';
 import { ENERGY_NAMES } from '@/lib/discover';
+import { BoneIcon } from './ActionBar';
 import { distanceLabel } from '@/lib/distance';
 import { photoUrl } from '@/lib/photos';
 import { sexLabel } from './Choices';
@@ -105,6 +106,15 @@ export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard({
           pointerEvents="none"
         />
 
+        {dog.te_dio_super && (
+          <>
+            <View style={[StyleSheet.absoluteFill, styles.superBorder, { borderColor: c.sky }]} pointerEvents="none" />
+            <View style={[styles.superTag, { backgroundColor: c.sky }]} pointerEvents="none">
+              <BoneIcon color="#FFFFFF" size={16} />
+              <Text style={styles.superTagText}>Te mandó un súper hueso</Text>
+            </View>
+          </>
+        )}
         <Animated.Text style={[styles.stamp, styles.like, { color: c.grass, borderColor: c.grass }, likeStyle]}>ME GUSTA</Animated.Text>
         <Animated.Text style={[styles.stamp, styles.nope, { color: c.coral, borderColor: c.coral }, nopeStyle]}>PASO</Animated.Text>
         <Animated.Text style={[styles.stamp, styles.super, { color: c.sky, borderColor: c.sky }, superStyle]}>¡SÚPER!</Animated.Text>
@@ -171,6 +181,9 @@ const styles = StyleSheet.create({
   like: { left: 20, transform: [{ rotate: '-14deg' }] },
   nope: { right: 20, transform: [{ rotate: '14deg' }] },
   super: { alignSelf: 'center', top: '42%', transform: [{ rotate: '-6deg' }] },
+  superBorder: { borderWidth: 4, borderRadius: 24 },
+  superTag: { position: 'absolute', top: 14, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
+  superTagText: { color: '#FFFFFF', fontFamily: fonts.bodyBold, fontSize: 13 },
   info: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 18, gap: 8 },
   name: { color: '#FFFFFF', fontFamily: fonts.display, fontSize: 32, lineHeight: 34, letterSpacing: -0.5 },
   age: { fontFamily: fonts.displaySemi, fontSize: 24 },

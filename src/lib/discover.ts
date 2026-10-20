@@ -16,6 +16,7 @@ export type NearbyDog = {
   cercania: Cercania;
   distancia_km: number;
   fotos: string[];
+  te_dio_super: boolean;
 };
 
 export type Filters = {
@@ -132,3 +133,25 @@ export const takePendingSwipe = () => {
   pending = null;
   return p;
 };
+
+/**
+ * Avisa en tiempo real cuando otro perro le manda un súper hueso a mi perro.
+ * Solo llegan súper huesos: los "me gusta" normales siguen siendo secretos.
+ */
+export function onSuperReceived(myDogId: string, cb: (dogId: string) => void) {
+  const ch = supabase
+    .channel(`super-${myDogId}-${Date.now()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'likes', filter: `a_perro=eq.${myDogId}` }, (p) => {
+      const row = p.new as { de_perro?: string; tipo?: string } | undefined;
+      if (row?.tipo === 'super' && row.de_perro) cb(row.de_perro);
+    })
+    .subscribe();
+  return () => {
+    supabase.removeChannel(ch);
+  };
+}
+
+export async function dogName(dogId: string): Promise<string | null> {
+  const { data } = await supabase.from('perros').select('nombre').eq('id', dogId).maybeSingle();
+  return data?.nombre ?? null;
+}
