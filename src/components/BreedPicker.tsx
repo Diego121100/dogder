@@ -8,7 +8,19 @@ import { fonts, radius, useColors } from '@/theme';
 type Section = { title: string; data: string[]; custom?: boolean };
 
 /** Campo "Raza": abre una lista con buscador. Si la raza no está, se puede usar lo que se escribió. */
-export function BreedPicker({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+export function BreedPicker({
+  value,
+  onChange,
+  error,
+  placeholder = 'Busca o elige una raza',
+  label = 'Raza',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  error?: string;
+  placeholder?: string;
+  label?: string;
+}) {
   const c = useColors();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -44,7 +56,7 @@ export function BreedPicker({ value, onChange, error }: { value: string; onChang
 
   return (
     <View style={{ gap: 5 }}>
-      <Text style={[styles.label, { color: c.muted }]}>Raza</Text>
+      <Text style={[styles.label, { color: c.muted }]}>{label}</Text>
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityRole="button"
@@ -52,7 +64,7 @@ export function BreedPicker({ value, onChange, error }: { value: string; onChang
         style={[styles.field, { borderColor: error ? c.coral : c.line, backgroundColor: c.surface }]}
       >
         <Text style={[styles.fieldText, { color: value ? c.ink : c.muted }]} numberOfLines={1}>
-          {value || 'Busca o elige una raza'}
+          {value || placeholder}
         </Text>
         <Text style={{ color: c.muted, fontSize: 16 }}>⌄</Text>
       </Pressable>

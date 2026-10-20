@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
+import Svg, { Path } from 'react-native-svg';
 import { Button, Logo } from '@/components/ui';
 import { SwipeCard, SwipeCardHandle } from '@/components/SwipeCard';
 import { ActionBar } from '@/components/ActionBar';
@@ -9,9 +10,11 @@ import { MatchModal } from '@/components/MatchModal';
 import { AskSexModal } from '@/components/AskSexModal';
 import { SuperSent } from '@/components/SuperSent';
 import { Toast, useToast } from '@/components/Toast';
+import { FilterSheet } from '@/components/FilterSheet';
 import {
   dogName,
   fetchNearby,
+  Filters,
   myDogSummary,
   MyDog,
   NearbyDog,
@@ -25,6 +28,7 @@ import {
   waitLabel,
 } from '@/lib/discover';
 import { useLocationWatch } from '@/lib/location';
+import { activeFilters, loadFilters, saveFilters } from '@/lib/filters';
 import { fonts, useColors } from '@/theme';
 
 type MatchInfo = { id: string; nombre: string; foto?: string; superRecibido?: boolean; superEnviado?: boolean };
@@ -43,12 +47,16 @@ export default function Discover() {
   const [superSent, setSuperSent] = useState<string | null>(null);
   const [superReceived, setSuperReceived] = useState<string | null>(null);
   const [match, setMatch] = useState<MatchInfo | null>(null);
+  const [filters, setFilters] = useState<Filters>(loadFilters);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Las funciones que traen perros siempre usan los filtros vigentes (se actualiza al aplicarlos).
+  const filtersRef = useRef(filters);
 
   useLocationWatch(true);
 
   // Trae los perros cercanos, el estado del súper hueso y los datos de mi perro.
   const load = useCallback(() => {
-    Promise.all([fetchNearby(), superAvailableAt(), myDogSummary()])
+    Promise.all([fetchNearby(filtersRef.current), superAvailableAt(), myDogSummary()])
       .then(([dogs, at, me]) => {
         setQueue(dogs);
         setSuperAt(at);
@@ -68,6 +76,17 @@ export default function Discover() {
     setStatus('loading');
     load();
   };
+
+  // Al aplicar filtros se guardan en el teléfono y se vuelven a buscar perros.
+  function applyFilters(f: Filters) {
+    setFiltersOpen(false);
+    setFilters(f);
+    saveFilters(f);
+    filtersRef.current = f;
+    setHistory([]);
+    reload();
+  }
+  const nFilters = activeFilters(filters);
 
   // El súper hueso vuelve a estar disponible solo, 24 horas después de usarlo.
   useEffect(() => {
@@ -98,7 +117,7 @@ export default function Discover() {
       const name = await dogName(fromId);
       if (name) setSuperReceived(name);
       try {
-        const dogs = await fetchNearby();
+        const dogs = await fetchNearby(filtersRef.current);
         const d = dogs.find((x) => x.perro_id === fromId);
         if (!d) return;
         setQueue((q) => {
@@ -157,7 +176,7 @@ export default function Discover() {
 
   async function refill(known: string[]) {
     try {
-      const more = await fetchNearby();
+      const more = await fetchNearby(filtersRef.current);
       setQueue((q) => {
         const have = new Set([...q.map((d) => d.perro_id), ...known]);
         return [...q, ...more.filter((d) => !have.has(d.perro_id))];
@@ -205,9 +224,25 @@ export default function Discover() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top']}>
       <View style={styles.header}>
-        <View style={{ width: 40 }} />
         <Logo />
-        <View style={{ width: 40 }} />
+      </View>
+      <View style={styles.toolbar}>
+        <Pressable
+          onPress={() => setFiltersOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={nFilters ? `Filtros, ${nFilters} activos` : 'Filtros'}
+          style={({ pressed }) => [styles.filterBtn, { borderColor: c.line, backgroundColor: c.surface, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={c.ink} strokeWidth={2.4} strokeLinecap="round">
+            <Path d="M4 6h16M7 12h10M10 18h4" />
+          </Svg>
+          <Text style={[styles.filterText, { color: c.ink }]}>Filtros</Text>
+          {nFilters > 0 && (
+            <View style={[styles.filterCount, { backgroundColor: c.ball }]}>
+              <Text style={[styles.filterCountText, { color: c.ballInk }]}>{nFilters}</Text>
+            </View>
+          )}
+        </Pressable>
       </View>
 
       <View style={styles.deck}>
@@ -224,8 +259,11 @@ export default function Discover() {
             <View style={[styles.ball, { backgroundColor: c.ball }]} />
             <Text style={[styles.emptyTitle, { color: c.ink }]}>No hay más perros cerca por ahora</Text>
             <Text style={[styles.emptyText, { color: c.muted }]}>
-              Vuelve más tarde: cada día se unen más dueños de tu zona.
+              {nFilters
+                ? 'Prueba con menos filtros o una distancia mayor para ver más perros.'
+                : 'Vuelve más tarde: cada día se unen más dueños de tu zona.'}
             </Text>
+            {nFilters > 0 && <Button title="Cambiar filtros" onPress={() => setFiltersOpen(true)} />}
             <Button title="Buscar de nuevo" variant="secondary" onPress={reload} />
           </View>
         )}
@@ -282,12 +320,18 @@ export default function Discover() {
           if (id) router.push({ pathname: '/chat/[id]', params: { id } });
         }}
       />
+      {filtersOpen && <FilterSheet initial={filters} onClose={() => setFiltersOpen(false)} onApply={applyFilters} />}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingTop: 8 },
+  toolbar: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
+  filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  filterText: { fontFamily: fonts.bodyBold, fontSize: 14 },
+  filterCount: { minWidth: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  filterCountText: { fontFamily: fonts.bodyBold, fontSize: 12 },
   deck: { flex: 1, marginHorizontal: 16, marginTop: 4 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   ball: { width: 64, height: 64, borderRadius: 32 },
