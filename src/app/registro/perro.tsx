@@ -32,13 +32,13 @@ export default function SignupDog() {
     setErrors(found);
     if (Object.keys(found).length) return;
     if (!supabaseConfigured) {
-      router.replace({ pathname: '/inicio', params: { demo: '1' } });
+      router.replace({ pathname: '/ubicacion', params: { registro: '1' } });
       return;
     }
     setSaving(true);
     try {
       await saveDog(dog);
-      router.replace('/inicio');
+      router.replace({ pathname: '/ubicacion', params: { registro: '1' } });
     } catch (e) {
       if (__DEV__) console.warn('[Guardar perro]', e);
       setServerError('No pudimos guardar el perfil. Revisa tu conexión a internet e inténtalo de nuevo.');

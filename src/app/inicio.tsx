@@ -6,6 +6,7 @@ import { Button, DemoBanner, Lead, Logo, Screen, Title } from '@/components/ui';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 import { useSignup } from '@/lib/signup';
 import { hasDog } from '@/lib/dog';
+import { hasLocationPermission, hasSavedLocation, useLocationWatch } from '@/lib/location';
 import { photoUrl } from '@/lib/photos';
 import { fonts, radius, useColors } from '@/theme';
 
@@ -14,14 +15,14 @@ type Dog = { nombre: string; raza: string; foto?: string };
 /**
  * Pantalla temporal después del registro o del inicio de sesión.
  * Si el perfil del perro no está completo, manda al paso 3.
- * Aquí irán el paso 4 (ubicación) y después Descubrir.
+ * Si falta la ubicación, manda a pedirla. Aquí irá Descubrir.
  */
 export default function Home() {
   const c = useColors();
   const { demo } = useLocalSearchParams<{ demo?: string }>();
   const { draft, reset } = useSignup();
   const [name, setName] = useState(draft.name);
-  const [state, setState] = useState<'loading' | 'needsDog' | 'ready'>(supabaseConfigured ? 'loading' : 'ready');
+  const [state, setState] = useState<'loading' | 'needsDog' | 'needsLocation' | 'ready'>(supabaseConfigured ? 'loading' : 'ready');
   const [dog, setDog] = useState<Dog | null>(null);
 
   useEffect(() => {
@@ -32,6 +33,10 @@ export default function Home() {
       if (typeof n === 'string') setName(n);
       if (!(await hasDog())) {
         setState('needsDog');
+        return;
+      }
+      if (!(await hasLocationPermission()) || !(await hasSavedLocation())) {
+        setState('needsLocation');
         return;
       }
       const { data: d } = await supabase
@@ -46,7 +51,11 @@ export default function Home() {
     })();
   }, []);
 
+  // Mientras la app está abierta, la ubicación se actualiza sola.
+  useLocationWatch(state === 'ready' && supabaseConfigured);
+
   if (state === 'loading') return null;
+  if (state === 'needsLocation') return <Redirect href="/ubicacion" />;
   if (state === 'needsDog') return <Redirect href="/registro/perro" />;
 
   async function logout() {
@@ -70,8 +79,8 @@ export default function Home() {
       )}
       <Lead>
         {dog
-          ? `El perfil de ${dog.nombre} ya está guardado. El siguiente paso del registro, tu ubicación, está en construcción.`
-          : 'Tu cuenta está lista. El siguiente paso del registro, tu ubicación, está en construcción.'}
+          ? `El perfil de ${dog.nombre} y tu ubicación ya están guardados. Lo siguiente es Descubrir: las tarjetas para deslizar, que están en construcción.`
+          : 'Tu cuenta está lista. Descubrir está en construcción.'}
       </Lead>
       {demo === '1' && <DemoBanner>Esto fue una prueba: no se creó ninguna cuenta.</DemoBanner>}
       <Button title={demo === '1' ? 'Volver al inicio' : 'Cerrar sesión'} variant="secondary" onPress={logout} />
