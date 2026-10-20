@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +17,7 @@ import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { fetchMessages, listMatches, markRead, MatchRow, Message, myUserId, sendMessage, useRealtime } from '@/lib/chat';
 import { photoUrl } from '@/lib/photos';
+import { SafetySheet } from '@/components/SafetySheet';
 import { fonts, radius, useColors } from '@/theme';
 
 const MAX = 1000;
@@ -31,6 +33,7 @@ export default function Chat() {
   const [text, setText] = useState('');
   const [sendError, setSendError] = useState('');
   const list = useRef<FlatList<Message>>(null);
+  const [safety, setSafety] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([fetchMessages(id), myUserId()])
@@ -97,6 +100,12 @@ export default function Chat() {
             {match ? `con ${match.dueno_nombre} · ${match.colonia}` : ' '}
           </Text>
         </View>
+        <Pressable onPress={() => setSafety(true)} disabled={!match} accessibilityRole="button" accessibilityLabel="Opciones: reportar o bloquear"
+          hitSlop={8} style={[styles.back, { borderColor: c.line, backgroundColor: c.surface }]}>
+          <Svg width={20} height={20} viewBox="0 0 24 24" fill={c.ink}>
+            <Path d="M5 10a2 2 0 110 4 2 2 0 010-4zm7 0a2 2 0 110 4 2 2 0 010-4zm7 0a2 2 0 110 4 2 2 0 010-4z" />
+          </Svg>
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -157,6 +166,24 @@ export default function Chat() {
           </Pressable>
         </View>
       </KeyboardAvoidingView>
+      {match && (
+        <SafetySheet
+          dogId={match.perro_id}
+          dogName={match.nombre}
+          visible={safety}
+          onClose={() => setSafety(false)}
+          onBlocked={() => {
+            Alert.alert(`Bloqueaste a ${match.nombre}`, 'Ya no se verán entre ustedes.');
+            router.replace('/matches');
+          }}
+          onReported={(blocked) => {
+            Alert.alert('Gracias por avisarnos', blocked
+              ? `Revisaremos tu reporte. También bloqueamos a ${match.nombre}.`
+              : 'Revisaremos tu reporte lo antes posible.');
+            if (blocked) router.replace('/matches');
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }

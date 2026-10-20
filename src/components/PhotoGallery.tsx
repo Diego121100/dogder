@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { MAX_PHOTOS, pickPhotos } from '@/lib/photos';
+import { MAX_PHOTOS, photoUrl, pickPhotos } from '@/lib/photos';
 import { fonts, radius, useColors } from '@/theme';
 
 /**
@@ -46,7 +46,7 @@ export function PhotoGallery({ photos, onChange }: { photos: string[]; onChange:
           accessibilityLabel={i === 0 ? 'Foto principal' : `Hacer principal la foto ${i + 1}`}
           style={[box, styles.filled]}
         >
-          <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image source={{ uri: photoUrl(uri) }} style={StyleSheet.absoluteFill} contentFit="cover" />
           {i === 0 && (
             <View style={[styles.mainTag, { backgroundColor: c.ball }]}>
               <Text style={[styles.mainTagText, { color: c.ballInk }]}>Principal</Text>

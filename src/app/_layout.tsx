@@ -43,6 +43,9 @@ export default function RootLayout() {
             <Stack.Screen name="inicio" options={{ gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" options={{ gestureEnabled: false, animation: 'fade' }} />
             <Stack.Screen name="chat/[id]" />
+            <Stack.Screen name="editar-perro" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="bloqueados" />
+            <Stack.Screen name="eliminar-cuenta" options={{ presentation: 'modal' }} />
             <Stack.Screen name="perro/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
             <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />
           </Stack>

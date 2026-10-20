@@ -79,6 +79,7 @@ export async function uploadPhoto(userId: string, localUri: string): Promise<str
 
 /** URL pública de una foto guardada en el bucket (los perros de prueba usan URLs completas). */
 export function photoUrl(path: string): string {
-  if (/^https?:\/\//.test(path)) return path;
+  // URLs completas (perros de prueba) y fotos recién elegidas en el teléfono se usan tal cual.
+  if (/^(https?|file|content|ph|assets-library):/.test(path)) return path;
   return supabase.storage.from('fotos').getPublicUrl(path).data.publicUrl;
 }

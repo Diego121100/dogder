@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { BoneIcon, NopeIcon, PawIcon } from '@/components/ActionBar';
 import { sexLabel } from '@/components/Choices';
+import { SafetySheet } from '@/components/SafetySheet';
 import { ageGroup, cachedDog, ENERGY_NAMES, setPendingSwipe, SwipeKind } from '@/lib/discover';
 import { distanceLabel } from '@/lib/distance';
 import { photoUrl } from '@/lib/photos';
@@ -27,6 +28,7 @@ export default function DogProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const dog = cachedDog(id);
   const [page, setPage] = useState(0);
+  const [safety, setSafety] = useState(false);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/descubrir'));
   const act = (kind: SwipeKind) => {
@@ -136,9 +138,30 @@ export default function DogProfile() {
               </View>
             </View>
           </View>
+          <Pressable onPress={() => setSafety(true)} accessibilityRole="button" style={{ alignSelf: 'flex-start', paddingVertical: 6 }}>
+            <Text style={{ fontFamily: fonts.bodyBold, fontSize: 14, color: c.coral, textDecorationLine: 'underline' }}>
+              Reportar o bloquear a {dog.nombre}
+            </Text>
+          </Pressable>
         </View>
       </ScrollView>
 
+      <SafetySheet
+        dogId={dog.perro_id}
+        dogName={dog.nombre}
+        visible={safety}
+        onClose={() => setSafety(false)}
+        onBlocked={() => {
+          Alert.alert(`Bloqueaste a ${dog.nombre}`, 'Ya no se verán entre ustedes.');
+          act('nope');
+        }}
+        onReported={(blocked) => {
+          Alert.alert('Gracias por avisarnos', blocked
+            ? `Revisaremos tu reporte. También bloqueamos a ${dog.nombre}.`
+            : 'Revisaremos tu reporte lo antes posible.');
+          if (blocked) act('nope');
+        }}
+      />
       <View style={[styles.actions, { paddingBottom: insets.bottom + 14, backgroundColor: c.bg }]}>
         <Pressable onPress={() => act('nope')} accessibilityRole="button" accessibilityLabel="Rechazar"
           style={[styles.act, styles.big, { backgroundColor: c.surface }]}>

@@ -131,6 +131,15 @@ await as(A, `insert into bloqueos (bloqueador, bloqueado) values ($1, $2)`, [A, 
 ok((await db.query('select count(*)::int c from matches')).rows[0].c === 0, 'Al bloquear se borran el match y la conversación');
 ok((await as(B, `select * from perros where id = $1`, [perros[A]])).rows.length === 0, 'La persona bloqueada ya no ve al perro de quien la bloqueó');
 ok((await as(B, `select * from perros_cercanos(10)`)).rows.every(r => r.perro_id !== perros[A]), 'El bloqueo funciona en ambos sentidos en Descubrir');
+const blq = (await as(A, `select * from mis_bloqueados()`)).rows;
+ok(blq.length === 1 && blq[0].perro_nombre === 'Canela', 'Diego ve a Canela en su lista de bloqueados');
+ok((await as(B, `select * from mis_bloqueados()`)).rows.length === 0, 'La persona bloqueada no ve quién la bloqueó');
+ok((await as(A, `select dueno_de($1) d`, [perros[D]])).rows[0].d === D, 'Se puede saber el dueño de un perro para reportarlo');
+await as(A, `delete from bloqueos where bloqueado = $1`, [B]);
+ok((await as(B, `select * from perros where id = $1`, [perros[A]])).rows.length === 1, 'Al desbloquear, se vuelven a ver');
+await as(A, `insert into bloqueos (bloqueador, bloqueado) values ($1, $2)`, [A, B]);
+await as(B, `delete from bloqueos where bloqueador = $1`, [A]);
+ok((await db.query(`select count(*)::int c from bloqueos where bloqueador = $1`, [A])).rows[0].c === 1, 'Nadie puede quitar un bloqueo que no hizo');
 
 // Volver (deshacer) recupera el súper hueso
 await as(D, `select dar_like($1, 'super')`, [perros[A]]);

@@ -11,11 +11,13 @@ Hecha con **Expo (React Native)** y **Supabase**.
 - Descubrir: tarjetas para deslizar, Volver, Rechazar, Súper hueso (1 cada 24 h) y Me gusta, pantalla de match
   y perfil completo al tocar la tarjeta.
 - Matches y chat en tiempo real, con mensajes sin leer y la pestaña de Matches con su contador.
+- Mi perro: editar perfil y fotos, usuarios bloqueados, contacto, documentos legales, cerrar sesión y eliminar cuenta.
+- Reportar y bloquear desde el chat y desde el perfil completo.
 - Términos y Condiciones, Aviso de Privacidad y Normas de la comunidad.
 - La base de datos en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros, fotos, likes,
   súper hueso, matches, chat, bloqueos, reportes y eliminar cuenta, y 31 pruebas en `supabase/tests/`.
 
-Siguen: filtros, Mi perro (editar perfil), reportar y bloquear, eliminar cuenta.
+Siguen: filtros. Antes de publicar: cambiar el correo de contacto en `src/content/contacto.ts`.
 
 ## Perros de prueba
 
