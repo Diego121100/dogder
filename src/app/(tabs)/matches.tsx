@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
 import { Button } from '@/components/ui';
-import { listMatches, MatchRow, myUserId, shortTime, useRealtime } from '@/lib/chat';
+import { listMatches, markMatchesSeen, MatchRow, myUserId, shortTime, useRealtime } from '@/lib/chat';
 import { photoUrl } from '@/lib/photos';
 import { fonts, useColors } from '@/theme';
 
@@ -22,6 +22,8 @@ export default function Matches() {
         setRows(r);
         setMe(id);
         setStatus('ready');
+        // Ya los viste: el aviso de la pestaña se apaga para estos matches.
+        if (r.some((m) => !m.visto)) markMatchesSeen();
       })
       .catch(() => setStatus('error'))
       .finally(() => setRefreshing(false));

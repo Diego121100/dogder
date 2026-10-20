@@ -104,7 +104,10 @@ ok((await as(B, `select * from mensajes`)).rows.length === 1, 'Mariana lee el me
 ok((await as(D, `select * from mensajes`)).rows.length === 0, 'Otra persona no puede leer la conversación');
 ok(await fails_(D, `insert into mensajes (match_id, autor_id, texto) values ('${m.match_id}', '${D}', 'intruso')`), 'Otra persona no puede escribir en la conversación');
 ok(await fails_(A, `insert into mensajes (match_id, autor_id, texto) values ('${m.match_id}', '${B}', 'suplantación')`), 'Nadie puede enviar mensajes a nombre de otro');
+ok((await as(B, `select * from mis_matches()`)).rows[0].visto === false, 'Un match nuevo aparece como no visto');
+await as(B, `select marcar_matches_vistos()`);
 let mb = (await as(B, `select * from mis_matches()`)).rows[0];
+ok(mb.visto === true, 'Al abrir Matches, el match queda como visto');
 ok(mb && mb.sin_leer === 1, 'Mariana ve 1 mensaje sin leer');
 ok((await as(A, `select * from mis_matches()`)).rows[0].sin_leer === 0, 'Los mensajes propios no cuentan como sin leer');
 await as(B, `select marcar_leido($1)`, [m.match_id]);

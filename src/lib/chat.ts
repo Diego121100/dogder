@@ -14,6 +14,7 @@ export type MatchRow = {
   ultimo_creado: string | null;
   creado: string;
   sin_leer: number;
+  visto: boolean;
 };
 
 export type Message = { id: string; match_id: string; autor_id: string; texto: string; creado: string; pending?: boolean };
@@ -50,8 +51,19 @@ export async function sendMessage(matchId: string, authorId: string, text: strin
   return data as Message;
 }
 
+/** Avisa a la pestaña de Matches que vuelva a contar (por ejemplo, al leer una conversación). */
+const badgeListeners = new Set<() => void>();
+const refreshBadge = () => badgeListeners.forEach((f) => f());
+
 export async function markRead(matchId: string) {
   await supabase.rpc('marcar_leido', { p_match: matchId });
+  refreshBadge();
+}
+
+/** Al abrir la pestaña Matches, los matches nuevos quedan como vistos. */
+export async function markMatchesSeen() {
+  await supabase.rpc('marcar_matches_vistos');
+  refreshBadge();
 }
 
 let channelSeq = 0;
@@ -85,15 +97,21 @@ export function useRealtime(onChange: () => void, matchId?: string) {
   }, [matchId]);
 }
 
-/** Cuántas conversaciones tienen algo pendiente (mensajes sin leer o matches sin saludar), para la pestaña. */
+/** Cuántos matches nuevos sin ver o conversaciones con mensajes sin leer hay, para la pestaña. */
 export function useMatchesBadge(): number {
   const [count, setCount] = useState(0);
   const refresh = useCallback(() => {
     listMatches()
-      .then((rows) => setCount(rows.filter((r) => r.sin_leer > 0 || !r.ultimo_texto).length))
+      .then((rows) => setCount(rows.filter((r) => r.sin_leer > 0 || !r.visto).length))
       .catch(() => {});
   }, []);
   useEffect(refresh, [refresh]);
+  useEffect(() => {
+    badgeListeners.add(refresh);
+    return () => {
+      badgeListeners.delete(refresh);
+    };
+  }, [refresh]);
   useRealtime(refresh);
   return count;
 }
