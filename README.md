@@ -22,7 +22,8 @@ Siguen: filtros, Mi perro (editar perfil), reportar y bloquear, eliminar cuenta.
 Para tener tarjetas que deslizar mientras no hay más usuarios, ejecuta en el SQL Editor de Supabase
 `supabase/seed/perros_de_prueba.sql`: crea 9 perros falsos alrededor de tu ubicación (4 ya le dieron
 me gusta a tu perro). Si además ejecutas `supabase/seed/respuestas_de_prueba.sql`, los dueños de prueba
-contestan solos en el chat. Para quitarlo todo, ejecuta `supabase/seed/borrar_perros_de_prueba.sql`.
+contestan solos en el chat. Para volver a empezar (que los 9 te den me gusta y vuelvan a salir en
+Descubrir), ejecuta `supabase/seed/reiniciar_pruebas.sql`. Para quitarlo todo, ejecuta `supabase/seed/borrar_perros_de_prueba.sql`.
 
 ## Probar la app en tu celular
 
