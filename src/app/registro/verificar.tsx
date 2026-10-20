@@ -46,7 +46,7 @@ export default function VerifyEmail() {
         setCode('');
         return;
       }
-      router.replace({ pathname: '/inicio', params: { demo: '1' } });
+      router.replace({ pathname: '/registro/perro' });
       return;
     }
     const { error: err } = await supabase.auth.verifyOtp({ email, token: value, type: 'email' });
@@ -57,7 +57,7 @@ export default function VerifyEmail() {
       input.current?.focus();
       return;
     }
-    router.replace('/inicio');
+    router.replace('/registro/perro');
   }
 
   async function resend() {
