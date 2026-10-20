@@ -3,6 +3,7 @@
 --  * Los 9 perros de prueba le dan "me gusta" a tu perro: cualquier "me gusta" tuyo será match.
 --  * Borra lo que ya deslizaste sobre ellos, para que vuelvan a aparecer en Descubrir.
 --  * Borra tus matches y chats con ellos, para empezar de cero.
+--  * Te devuelve tu súper hueso del día.
 -- Tu cuenta y tu perro no se tocan. Pégalo en Supabase > SQL Editor > New query > Run.
 -- =====================================================================
 
@@ -27,6 +28,9 @@ begin
   insert into likes (de_perro, a_perro, tipo)
   select unnest(pruebas), mi_perro, 'like'
   on conflict (de_perro, a_perro) do update set tipo = 'like';
+
+  update perfiles set super_hueso_usado = null
+   where id = (select dueno_id from perros where id = mi_perro);
 
   raise notice 'Listo: los % perros de prueba ya le dieron me gusta a tu perro.', array_length(pruebas, 1);
 end $$;
