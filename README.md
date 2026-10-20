@@ -1,0 +1,76 @@
+# Dogder
+
+App para que los dueños de perros se conozcan y organicen paseos, con el formato de Tinder y Bumble.
+Hecha con **Expo (React Native)** y **Supabase**.
+
+## Qué hay hasta ahora
+
+- Bienvenida, inicio de sesión y registro paso 1 (tu cuenta) y paso 2 (código de 6 dígitos por correo).
+- Términos y Condiciones, Aviso de Privacidad y Normas de la comunidad.
+- La base de datos completa en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros,
+  fotos, likes, súper hueso cada 24 horas, matches, chat, bloqueos, reportes y eliminar cuenta.
+- 28 pruebas automáticas de esas reglas en `supabase/tests/`.
+
+Siguen: paso 3 (tu perro), paso 4 (ubicación), Descubrir, Matches, chat y Mi perro.
+
+## Probar la app en tu celular
+
+1. Instala [Node.js](https://nodejs.org) (versión 20 o más reciente) en tu computadora.
+2. En esta carpeta, ejecuta:
+   ```
+   npm install
+   npx expo start
+   ```
+3. Instala **Expo Go** en tu celular y escanea el código QR que aparece en la terminal.
+
+Sin Supabase conectado la app funciona en **modo de prueba**: puedes recorrer el registro y el código
+de verificación es `000000`, pero no se crea ninguna cuenta.
+
+## Conectar Supabase
+
+1. Crea un proyecto en [supabase.com](https://supabase.com) (región sugerida: la más cercana a México).
+2. En **SQL Editor > New query**, pega todo el archivo `supabase/migrations/20261020000000_dogder.sql` y pulsa **Run**.
+3. En **Authentication > Email Templates > Confirm signup**, cambia el contenido para que el correo
+   muestre el código en lugar de un enlace, por ejemplo:
+   ```
+   <h2>Tu código de Dogder</h2>
+   <p>Usa este código para verificar tu correo: <strong>{{ .Token }}</strong></p>
+   <p>Vence en 10 minutos. Si no creaste una cuenta en Dogder, ignora este mensaje.</p>
+   ```
+4. En **Authentication > Sign In / Providers > Email**, deja activado *Confirm email* y pon
+   *Email OTP Expiration* en `600` segundos (10 minutos).
+5. Para que los correos salgan desde tu dominio, en **Authentication > Emails > SMTP Settings** usa los
+   datos SMTP de Resend (`smtp.resend.com`, puerto `465`, usuario `resend`, contraseña = tu API key de Resend).
+6. Copia `.env.example` como `.env` y llena los valores de **Project Settings > API**:
+   ```
+   EXPO_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
+   EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   ```
+   Esas dos claves son públicas. **Nunca** pongas en la app la *secret key* ni la contraseña de la base de datos.
+7. Vuelve a ejecutar `npx expo start`.
+
+## Comandos
+
+| Comando | Para qué |
+| --- | --- |
+| `npx expo start` | Abrir la app en modo desarrollo |
+| `npm run typecheck` | Revisar los tipos de TypeScript |
+| `npm run lint` | Revisar el estilo del código |
+| `npm run test:db` | Probar las reglas de seguridad de la base de datos |
+
+## Estructura
+
+```
+src/app/          Pantallas (cada archivo es una ruta de Expo Router)
+src/components/   Botones, campos, ilustraciones
+src/content/      Textos legales
+src/lib/          Supabase, validaciones y estado del registro
+src/theme.ts      Colores y tipografías de Dogder
+supabase/         Base de datos y sus pruebas
+```
+
+## Antes de publicar
+
+- Completar los datos resaltados en verde en los documentos legales y que un abogado los revise.
+- Revisar la marca “Dogder” en el IMPI.
+- Ver el plan completo en el documento *Plan para lanzar Dogder*.

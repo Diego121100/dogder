@@ -1,0 +1,47 @@
+import { Stack } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import {
+  BricolageGrotesque_600SemiBold,
+  BricolageGrotesque_800ExtraBold,
+} from '@expo-google-fonts/bricolage-grotesque';
+import {
+  NunitoSans_400Regular,
+  NunitoSans_600SemiBold,
+  NunitoSans_800ExtraBold,
+} from '@expo-google-fonts/nunito-sans';
+import { useColors } from '@/theme';
+import { SignupProvider } from '@/lib/signup';
+
+export default function RootLayout() {
+  const c = useColors();
+  const [loaded] = useFonts({
+    BricolageGrotesque_600SemiBold,
+    BricolageGrotesque_800ExtraBold,
+    NunitoSans_400Regular,
+    NunitoSans_600SemiBold,
+    NunitoSans_800ExtraBold,
+  });
+
+  if (!loaded) return null;
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SignupProvider>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="registro/cuenta" />
+            <Stack.Screen name="registro/verificar" />
+            <Stack.Screen name="inicio" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="legal/[doc]" options={{ presentation: 'modal' }} />
+          </Stack>
+        </SignupProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}

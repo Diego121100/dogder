@@ -1,25 +1,50 @@
 {
   "expo": {
-    "name": "dogder",
+    "name": "Dogder",
     "slug": "dogder",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "app.dogder"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#C9E23F",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "app.dogder"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-sqlite",
+      "expo-font",
+      "expo-image",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Dogder usa tu ubicación para mostrarte perros cerca de ti. Nunca guardamos tu ubicación exacta: la redondeamos a unos 500 metros."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Dogder necesita acceso a tus fotos para que subas las fotos de tu perro."
+        }
+      ]
+    ],
+    "scheme": "dogder",
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
