@@ -1,6 +1,8 @@
 /** Traduce los errores de Supabase Auth a mensajes claros en español. */
-export function authErrorMessage(err: { code?: string; message?: string } | null | undefined): string {
+export function authErrorMessage(err: { code?: string; message?: string; status?: number } | null | undefined): string {
   if (!err) return '';
+  // En modo desarrollo, el error completo aparece en la Terminal para poder diagnosticarlo.
+  if (__DEV__) console.warn('[Supabase Auth]', err.status ?? '', err.code ?? '', err.message ?? '');
   switch (err.code) {
     case 'user_already_exists':
     case 'email_exists':
@@ -18,6 +20,9 @@ export function authErrorMessage(err: { code?: string; message?: string } | null
       return 'Esa contraseña es muy fácil de adivinar. Elige otra.';
     case 'validation_failed':
       return 'Revisa los datos e inténtalo de nuevo.';
+  }
+  if (err.message && /sending.*email|email.*send|smtp/i.test(err.message)) {
+    return 'No pudimos enviar el código a tu correo. Revisa que esté bien escrito e inténtalo de nuevo.';
   }
   if (err.message && /network|fetch/i.test(err.message)) {
     return 'No hay conexión a internet. Revisa tu conexión e inténtalo de nuevo.';
