@@ -9,6 +9,7 @@ export type NearbyDog = {
   raza: string;
   tamano: 'Chico' | 'Mediano' | 'Grande';
   energia: number;
+  sexo: 'Macho' | 'Hembra' | null;
   bio: string;
   dueno_nombre: string;
   colonia: string;
@@ -23,6 +24,7 @@ export type Filters = {
   ages: string[];
   energies: number[];
   breeds: string[];
+  sexes: string[];
 };
 
 export const DEFAULT_FILTERS: Filters = {
@@ -31,6 +33,7 @@ export const DEFAULT_FILTERS: Filters = {
   ages: [],
   energies: [],
   breeds: [],
+  sexes: [],
 };
 
 /** Caché en memoria para abrir el perfil completo sin volver a pedirlo al servidor. */
@@ -46,6 +49,7 @@ export async function fetchNearby(f: Filters = DEFAULT_FILTERS): Promise<NearbyD
     p_energias: f.energies.length ? f.energies : null,
     p_razas: f.breeds.length ? f.breeds : null,
     p_limite: 20,
+    p_sexos: f.sexes.length ? f.sexes : null,
   });
   if (error) throw error;
   const dogs = (data ?? []) as NearbyDog[];
@@ -92,17 +96,24 @@ export function waitLabel(at: Date): string {
 }
 
 /** Datos de mi perro para la pantalla de match. */
-export async function myDogSummary(): Promise<{ nombre: string; foto?: string } | null> {
+export type MyDog = { id: string; nombre: string; sexo: 'Macho' | 'Hembra' | null; foto?: string };
+export async function myDogSummary(): Promise<MyDog | null> {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return null;
   const { data } = await supabase
     .from('perros')
-    .select('nombre, fotos(ruta, orden)')
+    .select('id, nombre, sexo, fotos(ruta, orden)')
     .eq('dueno_id', u.user.id)
     .order('orden', { referencedTable: 'fotos' })
     .limit(1, { referencedTable: 'fotos' })
     .single();
-  return data ? { nombre: data.nombre, foto: data.fotos?.[0]?.ruta } : null;
+  return data ? { id: data.id, nombre: data.nombre, sexo: data.sexo, foto: data.fotos?.[0]?.ruta } : null;
+}
+
+/** Guarda el sexo de mi perro (para perfiles creados antes de que existiera esta pregunta). */
+export async function setMyDogSex(dogId: string, sexo: 'Macho' | 'Hembra'): Promise<boolean> {
+  const { error } = await supabase.from('perros').update({ sexo }).eq('id', dogId);
+  return !error;
 }
 
 export const ENERGY_NAMES = ['Muy tranquilo', 'Tranquilo', 'Moderado', 'Activo', 'Incansable'];

@@ -1,12 +1,13 @@
 import { supabase } from './supabase';
 import { MAX_PHOTOS, MIN_PHOTOS, uploadPhoto } from './photos';
-import type { Size } from '@/components/Choices';
+import type { Sex, Size } from '@/components/Choices';
 
 export type DogDraft = {
   photos: string[]; // rutas locales en el teléfono
   name: string;
   age: string;
   breed: string;
+  sex: Sex | '';
   size: Size;
   energy: number; // 0 = sin elegir
   bio: string;
@@ -14,7 +15,7 @@ export type DogDraft = {
 
 export type DogErrors = Partial<Record<keyof DogDraft, string>>;
 
-export const emptyDog: DogDraft = { photos: [], name: '', age: '', breed: '', size: 'Mediano', energy: 0, bio: '' };
+export const emptyDog: DogDraft = { photos: [], name: '', age: '', breed: '', sex: '', size: 'Mediano', energy: 0, bio: '' };
 
 export function validateDog(d: DogDraft): DogErrors {
   const e: DogErrors = {};
@@ -26,6 +27,7 @@ export function validateDog(d: DogDraft): DogErrors {
   if (d.age.trim() === '' || !Number.isInteger(age) || age < 0 || age > 25) {
     e.age = 'Escribe su edad en años (0 si es cachorro).';
   }
+  if (!d.sex) e.sex = 'Elige si tu perro es macho o hembra.';
   if (d.breed.trim().length < 2) e.breed = 'Elige la raza. Si no tiene raza definida, elige “Mestizo”.';
   if (!d.energy) e.energy = 'Elige qué tan activo es tu perro.';
   return e;
@@ -62,6 +64,7 @@ export async function saveDog(d: DogDraft): Promise<void> {
     edad: Number(d.age),
     raza: d.breed.trim(),
     tamano: d.size,
+    sexo: d.sex || null,
     energia: d.energy,
     bio: d.bio.trim() || `Hola, soy ${d.name.trim()}.`,
   };

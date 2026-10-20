@@ -68,7 +68,7 @@ export const LEGAL: Record<LegalKey, LegalDoc> = {
             'Identificación y contacto: nombre, apellido, correo electrónico y fecha de nacimiento.',
             'Cuenta: contraseña, que guardamos cifrada.',
             'Ubicación aproximada: la ubicación de tu dispositivo, redondeada a unos 500 metros, y tu colonia.',
-            'Perfil de tu perro: nombre, edad, raza, tamaño, nivel de energía, descripción y fotos.',
+            'Perfil de tu perro: nombre, edad, sexo, raza, tamaño, nivel de energía, descripción y fotos.',
             'Uso de la app: me gusta, súper huesos, matches y mensajes del chat.',
             'Datos técnicos: tipo de dispositivo y sistema operativo.',
           ] },

@@ -16,6 +16,7 @@ import type { NearbyDog, SwipeKind } from '@/lib/discover';
 import { ENERGY_NAMES } from '@/lib/discover';
 import { distanceLabel } from '@/lib/distance';
 import { photoUrl } from '@/lib/photos';
+import { sexLabel } from './Choices';
 import { fonts, useColors } from '@/theme';
 
 export type SwipeCardHandle = { swipe: (kind: SwipeKind) => void; reset: () => void };
@@ -113,7 +114,9 @@ export const SwipeCard = forwardRef<SwipeCardHandle, Props>(function SwipeCard({
             {dog.nombre} <Text style={styles.age}>{dog.edad}</Text>
           </Text>
           <View style={styles.chips}>
-            {[dog.raza, dog.tamano, `${dog.colonia} · ${distanceLabel(dog.cercania, dog.distancia_km)}`].map((t) => (
+            {[dog.sexo ? sexLabel(dog.sexo) : null, dog.raza, dog.tamano, `${dog.colonia} · ${distanceLabel(dog.cercania, dog.distancia_km)}`]
+              .filter((t): t is string => !!t)
+              .map((t) => (
               <View key={t} style={styles.chip}>
                 <Text style={styles.chipText}>{t}</Text>
               </View>

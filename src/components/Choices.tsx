@@ -44,6 +44,37 @@ export function SizePicker({ value, onChange }: { value: Size; onChange: (v: Siz
   );
 }
 
+export type Sex = 'Macho' | 'Hembra';
+export const sexLabel = (s: Sex) => (s === 'Macho' ? '♂ Macho' : '♀ Hembra');
+
+/** Macho / Hembra. */
+export function SexPicker({ value, onChange, error }: { value: Sex | ''; onChange: (v: Sex) => void; error?: string }) {
+  const c = useColors();
+  return (
+    <View style={{ gap: 5 }}>
+      <Label>Sexo</Label>
+      <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
+        {(['Macho', 'Hembra'] as const).map((s) => {
+          const on = s === value;
+          return (
+            <Pressable
+              key={s}
+              onPress={() => onChange(s)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              accessibilityLabel={s}
+              style={[styles.seg, { borderColor: on ? c.ball : error ? c.coral : c.line, backgroundColor: on ? c.ball : c.surface }]}
+            >
+              <Text style={[styles.segText, { color: on ? c.ballInk : c.ink }]}>{sexLabel(s)}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <ErrorText>{error}</ErrorText>
+    </View>
+  );
+}
+
 /** Nivel de energía del 1 al 5, con barritas que crecen, como en el prototipo. */
 export function EnergyPicker({ value, onChange, error }: { value: number; onChange: (v: number) => void; error?: string }) {
   const c = useColors();

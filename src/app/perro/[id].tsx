@@ -5,6 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
 import { BoneIcon, NopeIcon, PawIcon } from '@/components/ActionBar';
+import { sexLabel } from '@/components/Choices';
 import { ageGroup, cachedDog, ENERGY_NAMES, setPendingSwipe, SwipeKind } from '@/lib/discover';
 import { distanceLabel } from '@/lib/distance';
 import { photoUrl } from '@/lib/photos';
@@ -91,7 +92,9 @@ export default function DogProfile() {
             </Text>
           </View>
           <View style={styles.chips}>
-            {[dog.raza, dog.tamano, ageGroup(dog.edad)].map((t) => (
+            {[dog.sexo ? sexLabel(dog.sexo) : null, dog.raza, dog.tamano, ageGroup(dog.edad)]
+              .filter((t): t is string => !!t)
+              .map((t) => (
               <View key={t} style={[styles.chip, { backgroundColor: c.surface, borderColor: c.line }]}>
                 <Text style={[styles.chipText, { color: c.ink }]}>{t}</Text>
               </View>

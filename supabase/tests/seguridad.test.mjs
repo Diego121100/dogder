@@ -8,7 +8,7 @@ const migrations = process.argv.slice(2).map((f) => fs.readFileSync(f, 'utf8'));
 await db.exec(`
   create role authenticated nologin; create role anon nologin;
   create schema auth; create schema storage;
-  create table auth.users (id uuid primary key, raw_user_meta_data jsonb);
+  create table auth.users (id uuid primary key, raw_user_meta_data jsonb, email text);
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
   create table storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]);
@@ -80,6 +80,11 @@ await db.query('delete from auth.users where id = $1', [E]);
 ok(!('lat' in (cerca.rows[0] ?? {})) && !('lng' in (cerca.rows[0] ?? {})), 'Descubrir no devuelve coordenadas de nadie');
 ok((await as(A, `select * from perros_cercanos(3)`)).rows.every(r => r.distancia_km <= 3), 'El filtro de distancia funciona');
 ok((await as(A, `select * from perros_cercanos(10, array['Chico'])`)).rows.length === 0, 'El filtro de tamaño funciona');
+await db.query(`update perros set sexo = 'Hembra' where id = $1`, [perros[B]]);
+await db.query(`update perros set sexo = 'Macho' where id = $1`, [perros[D]]);
+const hembras = (await as(A, `select * from perros_cercanos(10, p_sexos => array['Hembra'])`)).rows;
+ok(hembras.length === 1 && hembras[0].sexo === 'Hembra', 'El filtro de macho o hembra funciona');
+ok(await fails_(A, `update perros set sexo = 'Otro' where id = '${perros[A]}'`), 'El sexo solo puede ser Macho o Hembra');
 
 // Likes, súper hueso y match
 ok(await fails_(A, `insert into likes values ('${perros[A]}', '${perros[B]}', 'like')`), 'No se pueden crear likes directo, solo con la función');

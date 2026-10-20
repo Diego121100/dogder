@@ -5,7 +5,8 @@
 --
 -- Úsalo solo mientras desarrollas. Para borrarlos, ejecuta borrar_perros_de_prueba.sql.
 -- Pégalo completo en Supabase > SQL Editor > New query > Run.
--- Antes, abre la app y permite la ubicación, para que haya una ubicación tuya guardada.
+-- Antes, abre la app y permite la ubicación, para que haya una ubicación tuya guardada,
+-- y ejecuta todas las migraciones de supabase/migrations.
 -- =====================================================================
 
 do $$
@@ -66,8 +67,9 @@ begin
        set lat = redondear_coord(base_lat + r.dlat), lng = redondear_coord(base_lng + r.dlng), ubicacion_actualizada = now()
      where id = uid;
 
-    insert into perros (dueno_id, nombre, edad, raza, tamano, energia, bio)
-    values (uid, r.perro, r.edad, r.raza, r.tamano, r.energia, r.bio)
+    insert into perros (dueno_id, nombre, edad, raza, tamano, energia, sexo, bio)
+    values (uid, r.perro, r.edad, r.raza, r.tamano, r.energia,
+            case when r.perro in ('Canela', 'Luna', 'Nube', 'Bombón') then 'Hembra' else 'Macho' end, r.bio)
     returning id into pid;
 
     insert into fotos (perro_id, ruta, orden) values (pid, r.foto1, 0), (pid, r.foto2, 1);

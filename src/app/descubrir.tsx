@@ -7,12 +7,15 @@ import { Button, Logo } from '@/components/ui';
 import { SwipeCard, SwipeCardHandle } from '@/components/SwipeCard';
 import { ActionBar } from '@/components/ActionBar';
 import { MatchModal } from '@/components/MatchModal';
+import { AskSexModal } from '@/components/AskSexModal';
 import { Toast, useToast } from '@/components/Toast';
 import {
   fetchNearby,
   myDogSummary,
+  MyDog,
   NearbyDog,
   sendSwipe,
+  setMyDogSex,
   superAvailableAt,
   SwipeKind,
   takePendingSwipe,
@@ -35,7 +38,7 @@ export default function Discover() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [history, setHistory] = useState<{ dog: NearbyDog; kind: SwipeKind }[]>([]);
   const [superAt, setSuperAt] = useState<Date | null>(null);
-  const [mine, setMine] = useState<{ nombre: string; foto?: string } | null>(null);
+  const [mine, setMine] = useState<MyDog | null>(null);
   const [match, setMatch] = useState<{ nombre: string; foto?: string } | null>(null);
 
   useLocationWatch(true);
@@ -233,6 +236,16 @@ export default function Discover() {
         disabled={status !== 'ready'}
       />
 
+      <AskSexModal
+        dogName={mine?.nombre ?? 'tu perro'}
+        visible={status === 'ready' && !!mine && !mine.sexo}
+        onAnswer={async (sexo) => {
+          if (!mine) return false;
+          const ok = await setMyDogSex(mine.id, sexo);
+          if (ok) setMine({ ...mine, sexo });
+          return ok;
+        }}
+      />
       <Toast message={toast.message} />
       <MatchModal
         mine={mine}
