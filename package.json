@@ -43,7 +43,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
-    "test:db": "node supabase/tests/seguridad.test.mjs supabase/migrations/*.sql"
+    "test:db": "node supabase/tests/seguridad.test.mjs supabase/migrations/*.sql",
+    "sincronizar": "echo \"Sincronizando con GitHub cada 15 segundos. Control + C para detener.\" && while true; do git pull --ff-only -q && sleep 15; done"
   },
   "private": true
 }
