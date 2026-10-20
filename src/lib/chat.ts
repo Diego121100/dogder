@@ -15,6 +15,8 @@ export type MatchRow = {
   creado: string;
   sin_leer: number;
   visto: boolean;
+  super_recibido: boolean;
+  super_enviado: boolean;
 };
 
 export type Message = { id: string; match_id: string; autor_id: string; texto: string; creado: string; pending?: boolean };

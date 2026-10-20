@@ -102,6 +102,8 @@ ok(m.ok && m.match_id, 'Canela da me gusta a Floki: ¡match!');
 await as(D, `select dar_like($1, 'like')`, [perros[A]]);
 ok((await as(A, `select * from likes where de_perro = $1`, [perros[D]])).rows.length === 0, 'Los me gusta normales siguen siendo secretos');
 ok((await as(A, `select * from mis_matches()`)).rows.length === 1, 'Floki ve su match en Matches');
+ok((await as(B, `select * from mis_matches()`)).rows[0].super_recibido === true, 'Mariana ve en Matches que Floki le mandó un súper hueso');
+ok((await as(A, `select * from mis_matches()`)).rows[0].super_enviado === true, 'Diego ve en Matches que él mandó el súper hueso');
 ok((await as(D, `select * from matches`)).rows.length === 0, 'Otra persona no puede ver ese match');
 
 // Chat

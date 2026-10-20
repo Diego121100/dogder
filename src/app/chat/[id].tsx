@@ -117,7 +117,7 @@ export default function Chat() {
             ListHeaderComponent={
               <Text style={[styles.sys, { color: c.muted }]}>
                 {match
-                  ? `Hiciste match con ${match.nombre} el ${dayLabel(match.creado)}. ¡Saluda a ${match.nombre}!`
+                  ? `${match.super_recibido ? `${match.nombre} te mandó un súper hueso e hicieron match` : match.super_enviado ? `Le mandaste un súper hueso a ${match.nombre} e hicieron match` : `Hiciste match con ${match.nombre}`} el ${dayLabel(match.creado)}. ¡Saluda a ${match.nombre}!`
                   : 'Hiciste match. ¡Saluda!'}
               </Text>
             }

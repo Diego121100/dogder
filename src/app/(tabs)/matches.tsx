@@ -6,6 +6,7 @@ import { Image } from 'expo-image';
 import { Button } from '@/components/ui';
 import { listMatches, markMatchesSeen, MatchRow, myUserId, shortTime, useRealtime } from '@/lib/chat';
 import { photoUrl } from '@/lib/photos';
+import { BoneIcon } from '@/components/ActionBar';
 import { fonts, useColors } from '@/theme';
 
 /** Matches: arriba los nuevos (sin mensajes), abajo las conversaciones. */
@@ -79,8 +80,15 @@ export default function Matches() {
                   <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 6 }}>
                     {fresh.map((r) => (
                       <Pressable key={r.match_id} onPress={() => open(r)} accessibilityRole="button"
-                        accessibilityLabel={`Nuevo match: ${r.nombre}. Toca para enviarle un mensaje`} style={styles.fresh}>
-                        {avatar(r.foto, 72, c.ball)}
+                        accessibilityLabel={`Nuevo match: ${r.nombre}.${r.super_recibido ? ' Te mandó un súper hueso.' : ''} Toca para enviarle un mensaje`} style={styles.fresh}>
+                        <View>
+                          {avatar(r.foto, 72, r.super_recibido ? c.sky : c.ball)}
+                          {r.super_recibido && (
+                            <View style={[styles.boneBadge, { backgroundColor: c.sky, borderColor: c.bg }]}>
+                              <BoneIcon color="#FFFFFF" size={13} />
+                            </View>
+                          )}
+                        </View>
                         <Text style={[styles.freshName, { color: c.ink }]} numberOfLines={1}>{r.nombre}</Text>
                       </Pressable>
                     ))}
@@ -105,6 +113,14 @@ export default function Matches() {
                   </Text>
                   {r.ultimo_creado && <Text style={[styles.time, { color: c.muted }]}>{shortTime(r.ultimo_creado)}</Text>}
                 </View>
+                {(r.super_recibido || r.super_enviado) && (
+                  <View style={[styles.superTag, { backgroundColor: c.sky }]}>
+                    <BoneIcon color="#FFFFFF" size={11} />
+                    <Text style={styles.superTagText}>
+                      {r.super_recibido ? 'Te mandó un súper hueso' : 'Le mandaste un súper hueso'}
+                    </Text>
+                  </View>
+                )}
                 <Text style={[styles.last, { color: r.sin_leer ? c.ink : c.muted, fontFamily: r.sin_leer ? fonts.bodyBold : fonts.body }]}
                   numberOfLines={1}>
                   {r.ultimo_autor === me ? 'Tú: ' : ''}{r.ultimo_texto}
@@ -132,6 +148,9 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bodyBold, fontSize: 16, flexShrink: 1 },
   time: { fontFamily: fonts.body, fontSize: 12.5 },
   last: { fontSize: 14.5, marginTop: 2 },
+  boneBadge: { position: 'absolute', right: -2, bottom: 2, width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  superTag: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, marginTop: 3 },
+  superTagText: { color: '#FFFFFF', fontFamily: fonts.bodyBold, fontSize: 11 },
   unread: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
   unreadText: { color: '#FFFFFF', fontFamily: fonts.bodyBold, fontSize: 12 },
   empty: { flex: 1, padding: 24, gap: 14, justifyContent: 'center' },
