@@ -7,6 +7,7 @@ import { SwipeCard, SwipeCardHandle } from '@/components/SwipeCard';
 import { ActionBar } from '@/components/ActionBar';
 import { MatchModal } from '@/components/MatchModal';
 import { AskSexModal } from '@/components/AskSexModal';
+import { SuperSent } from '@/components/SuperSent';
 import { Toast, useToast } from '@/components/Toast';
 import {
   fetchNearby,
@@ -35,6 +36,7 @@ export default function Discover() {
   const [history, setHistory] = useState<{ dog: NearbyDog; kind: SwipeKind }[]>([]);
   const [superAt, setSuperAt] = useState<Date | null>(null);
   const [mine, setMine] = useState<MyDog | null>(null);
+  const [superSent, setSuperSent] = useState<string | null>(null);
   const [match, setMatch] = useState<{ id: string; nombre: string; foto?: string } | null>(null);
 
   useLocationWatch(true);
@@ -72,6 +74,8 @@ export default function Discover() {
 
   const superExhausted = () => !!superAt && superAt > new Date();
 
+  const clearSuperSent = useCallback(() => setSuperSent(null), []);
+
   // Guarda la decisión en el servidor y muestra el match si lo hubo.
   async function commit(dog: NearbyDog, kind: SwipeKind) {
     const r = await sendSwipe(dog.perro_id, kind);
@@ -89,6 +93,7 @@ export default function Discover() {
     }
     if (kind === 'super') setSuperAt(new Date(Date.now() + 24 * 3600_000));
     if (r.matchId) setMatch({ id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0] });
+    else if (kind === 'super') setSuperSent(dog.nombre);
   }
 
   // Se llama cuando la tarjeta de arriba terminó de salir de la pantalla.
@@ -221,6 +226,7 @@ export default function Discover() {
           return ok;
         }}
       />
+      <SuperSent dogName={superSent} onDone={clearSuperSent} />
       <Toast message={toast.message} />
       <MatchModal
         mine={mine}
