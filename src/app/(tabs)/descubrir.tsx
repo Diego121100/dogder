@@ -11,6 +11,7 @@ import { AskSexModal } from '@/components/AskSexModal';
 import { SuperSent } from '@/components/SuperSent';
 import { Toast, useToast } from '@/components/Toast';
 import { FilterSheet } from '@/components/FilterSheet';
+import { PlusPrompt, PlusPromptInfo } from '@/components/PlusPrompt';
 import {
   dogName,
   fetchNearby,
@@ -21,7 +22,6 @@ import {
   onSuperReceived,
   sendSwipe,
   setMyDogSex,
-  superAvailableAt,
   SwipeKind,
   takePendingSwipe,
   undoSwipe,
@@ -29,6 +29,7 @@ import {
 } from '@/lib/discover';
 import { useLocationWatch } from '@/lib/location';
 import { activeFilters, loadFilters, saveFilters } from '@/lib/filters';
+import { FREE_PLAN, myPlan, Plan } from '@/lib/plan';
 import { fonts, useColors } from '@/theme';
 
 type MatchInfo = { id: string; nombre: string; foto?: string; superRecibido?: boolean; superEnviado?: boolean };
@@ -42,7 +43,8 @@ export default function Discover() {
   const [queue, setQueue] = useState<NearbyDog[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [history, setHistory] = useState<{ dog: NearbyDog; kind: SwipeKind }[]>([]);
-  const [superAt, setSuperAt] = useState<Date | null>(null);
+  const [plan, setPlan] = useState<Plan>(FREE_PLAN);
+  const [upsell, setUpsell] = useState<PlusPromptInfo | null>(null);
   const [mine, setMine] = useState<MyDog | null>(null);
   const [superSent, setSuperSent] = useState<string | null>(null);
   const [superReceived, setSuperReceived] = useState<string | null>(null);
@@ -54,12 +56,16 @@ export default function Discover() {
 
   useLocationWatch(true);
 
-  // Trae los perros cercanos, el estado del súper hueso y los datos de mi perro.
+  // Trae los perros cercanos, el plan (límites de hoy) y los datos de mi perro.
+  const viajeRef = useRef<string | null | undefined>(undefined);
+  const plusRef = useRef<boolean | undefined>(undefined);
   const load = useCallback(() => {
-    Promise.all([fetchNearby(filtersRef.current), superAvailableAt(), myDogSummary()])
-      .then(([dogs, at, me]) => {
+    Promise.all([fetchNearby(filtersRef.current), myPlan(), myDogSummary()])
+      .then(([dogs, p, me]) => {
         setQueue(dogs);
-        setSuperAt(at);
+        setPlan(p);
+        viajeRef.current = p.viaje;
+        plusRef.current = p.plus;
         setMine(me);
         setStatus('ready');
       })
@@ -86,17 +92,52 @@ export default function Discover() {
     setHistory([]);
     reload();
   }
-  const nFilters = activeFilters(filters);
+  const nFilters = activeFilters(filters, plan.plus);
 
-  // El súper hueso vuelve a estar disponible solo, 24 horas después de usarlo.
+  // Al volver a esta pestaña (por ejemplo, después de cambiar el modo viaje o activar Plus),
+  // si cambió dónde buscar o el plan, se vuelven a buscar perros.
+  useFocusEffect(
+    useCallback(() => {
+      if (viajeRef.current === undefined) return;
+      myPlan()
+        .then((p) => {
+          setPlan(p);
+          if (p.viaje !== viajeRef.current || p.plus !== plusRef.current) {
+            setStatus('loading');
+            load();
+          }
+        })
+        .catch(() => {});
+    }, [load]),
+  );
+
+  // Los súper huesos y los me gusta vuelven solos cuando pasan las 24 horas.
+  const nextRefill = [plan.superVuelve, plan.likesVuelven, plan.deshacerVuelve]
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
   useEffect(() => {
-    if (!superAt) return;
-    const ms = superAt.getTime() - Date.now();
-    const t = setTimeout(() => setSuperAt(null), Math.max(0, ms));
+    if (!nextRefill) return;
+    const t = setTimeout(() => myPlan().then(setPlan).catch(() => {}), Math.max(1000, nextRefill.getTime() - Date.now() + 1000));
     return () => clearTimeout(t);
-  }, [superAt]);
+  }, [nextRefill]);
 
-  const superExhausted = () => !!superAt && superAt > new Date();
+  const superExhausted = () => plan.supersRestantes <= 0;
+  const likesExhausted = () => plan.likesRestantes === 0;
+
+  function superMessage(at: Date | null) {
+    const wait = at ? ` Tendrás otro en ${waitLabel(at)}.` : '';
+    if (plan.plus) return toast.show(`Ya usaste tus 5 súper huesos de hoy.${wait}`);
+    setUpsell({
+      title: 'Ya usaste tu súper hueso de hoy',
+      text: `Con Dogder Plus tienes 5 súper huesos al día.${wait}`,
+    });
+  }
+  function likesMessage(at: Date | null) {
+    setUpsell({
+      title: 'Se acabaron tus me gusta de hoy',
+      text: `Tienes 50 me gusta cada 24 horas${at ? `; vuelves a tener en ${waitLabel(at)}` : ''}. Con Dogder Plus son ilimitados. Rechazar sigue siendo gratis.`,
+    });
+  }
 
   const matchAfterSuper = useRef<MatchInfo | null>(null);
   const clearSuperSent = useCallback(() => {
@@ -137,15 +178,30 @@ export default function Discover() {
       setQueue((q) => [dog, ...q]);
       setHistory((h) => h.filter((x) => x.dog.perro_id !== dog.perro_id));
       if (r.reason === 'super_agotado') {
-        setSuperAt(r.availableAt);
-        toast.show(`Ya usaste tu súper hueso. Tendrás otro en ${waitLabel(r.availableAt)}.`);
+        setPlan((p) => ({ ...p, supersRestantes: 0, superVuelve: r.availableAt }));
+        superMessage(r.availableAt);
+      } else if (r.reason === 'likes_agotados') {
+        setPlan((p) => ({ ...p, likesRestantes: 0, likesVuelven: r.availableAt }));
+        likesMessage(r.availableAt);
       } else {
-        if (__DEV__) console.warn('[Deslizar]', r.message);
+        if (__DEV__ && r.reason === 'error') console.warn('[Deslizar]', r.message);
         toast.show('No se guardó. Revisa tu conexión e inténtalo de nuevo.');
       }
       return;
     }
-    if (kind === 'super') setSuperAt(new Date(Date.now() + 24 * 3600_000));
+    // Descuenta lo que se usó (y, si se acabó, pregunta al servidor cuándo vuelve).
+    setPlan((p) => {
+      const next = {
+        ...p,
+        supersRestantes: kind === 'super' ? Math.max(0, p.supersRestantes - 1) : p.supersRestantes,
+        likesRestantes: kind === 'like' && p.likesRestantes !== null ? Math.max(0, p.likesRestantes - 1) : p.likesRestantes,
+      };
+      if (next.supersRestantes === 0 || next.likesRestantes === 0) myPlan().then(setPlan).catch(() => {});
+      if (kind === 'like' && (next.likesRestantes === 10 || next.likesRestantes === 3)) {
+        setTimeout(() => toast.show(`Te quedan ${next.likesRestantes} me gusta hoy.`), 0);
+      }
+      return next;
+    });
     const m = r.matchId
       ? { id: r.matchId, nombre: dog.nombre, foto: dog.fotos[0], superRecibido: dog.te_dio_super, superEnviado: kind === 'super' }
       : null;
@@ -162,10 +218,11 @@ export default function Discover() {
   function onSwiped(kind: SwipeKind) {
     const dog = queue[0];
     if (!dog) return;
-    if (kind === 'super' && superExhausted()) {
-      // Deslizó hacia arriba sin súper hueso disponible: la tarjeta regresa a su lugar.
+    if ((kind === 'super' && superExhausted()) || (kind === 'like' && likesExhausted())) {
+      // Sin súper huesos o sin me gusta disponibles: la tarjeta regresa a su lugar.
       top.current?.reset();
-      toast.show(`Ya usaste tu súper hueso. Tendrás otro en ${waitLabel(superAt!)}.`);
+      if (kind === 'super') superMessage(plan.superVuelve);
+      else likesMessage(plan.likesVuelven);
       return;
     }
     setQueue((q) => q.slice(1));
@@ -188,11 +245,16 @@ export default function Discover() {
 
   function press(kind: SwipeKind) {
     if (!queue.length) return;
-    if (kind === 'super' && superExhausted()) {
-      toast.show(`Ya usaste tu súper hueso. Tendrás otro en ${waitLabel(superAt!)}.`);
-      return;
-    }
+    if (kind === 'super' && superExhausted()) return superMessage(plan.superVuelve);
+    if (kind === 'like' && likesExhausted()) return likesMessage(plan.likesVuelven);
     top.current?.swipe(kind);
+  }
+
+  function undoUpsell(at: Date | null) {
+    setUpsell({
+      title: 'Ya usaste tu "Volver" de hoy',
+      text: `Gratis puedes regresar al último perro una vez al día${at ? ` (otra vez en ${waitLabel(at)})` : ''}. Con Dogder Plus, las veces que quieras.`,
+    });
   }
 
   async function undo() {
@@ -201,13 +263,31 @@ export default function Discover() {
       toast.show('No hay ningún perro anterior.');
       return;
     }
+    if (!plan.plus && plan.deshacerVuelve && plan.deshacerVuelve > new Date()) return undoUpsell(plan.deshacerVuelve);
     setHistory((h) => h.slice(0, -1));
     setQueue((q) => [last.dog, ...q.filter((d) => d.perro_id !== last.dog.perro_id)]);
-    const ok = await undoSwipe(last.dog.perro_id);
-    if (ok && last.kind === 'super') {
-      setSuperAt(null);
-      toast.show('Recuperaste tu súper hueso.');
+    const r = await undoSwipe(last.dog.perro_id);
+    if (!r.ok) {
+      // No se pudo: el perro vuelve a salir de la pila.
+      setQueue((q) => q.filter((d) => d.perro_id !== last.dog.perro_id));
+      setHistory((h) => [...h, last]);
+      if (r.reason === 'deshacer_agotado') {
+        setPlan((p) => ({ ...p, deshacerVuelve: r.availableAt }));
+        undoUpsell(r.availableAt);
+      } else if (r.reason === 'solo_ultimo') {
+        setUpsell({ title: 'Solo puedes regresar al último', text: 'Con Dogder Plus puedes regresar a cualquier perro que deslizaste.' });
+      } else {
+        toast.show('No se pudo regresar. Revisa tu conexión.');
+      }
+      return;
     }
+    setPlan((p) => ({
+      ...p,
+      deshacerVuelve: p.plus ? null : new Date(Date.now() + 24 * 3600_000),
+      supersRestantes: last.kind === 'super' ? p.supersRestantes + 1 : p.supersRestantes,
+      likesRestantes: last.kind === 'like' && p.likesRestantes !== null ? p.likesRestantes + 1 : p.likesRestantes,
+    }));
+    if (last.kind === 'super') toast.show('Recuperaste tu súper hueso.');
   }
 
   // Al volver del perfil completo, aplica la acción que se eligió ahí.
@@ -242,6 +322,20 @@ export default function Discover() {
               <Text style={[styles.filterCountText, { color: c.ballInk }]}>{nFilters}</Text>
             </View>
           )}
+        </Pressable>
+        <Pressable
+          onPress={() => router.push('/viaje')}
+          accessibilityRole="button"
+          accessibilityLabel={plan.viaje ? `Modo viaje: ${plan.viaje}` : 'Modo viaje'}
+          style={({ pressed }) => [styles.filterBtn, { flexShrink: 1, borderColor: plan.viaje ? c.ink : c.line, backgroundColor: plan.viaje ? c.ink : c.surface, opacity: pressed ? 0.7 : 1 }]}
+        >
+          <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={plan.viaje ? c.ball : c.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <Path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z" />
+            <Path d="M12 12.2a2.6 2.6 0 100-5.2 2.6 2.6 0 000 5.2z" />
+          </Svg>
+          <Text style={[styles.filterText, { color: plan.viaje ? c.bg : c.ink, flexShrink: 1 }]} numberOfLines={1}>
+            {plan.viaje ?? 'Mi zona'}
+          </Text>
         </Pressable>
       </View>
 
@@ -293,7 +387,7 @@ export default function Discover() {
         onNope={() => press('nope')}
         onSuper={() => press('super')}
         onLike={() => press('like')}
-        superLeft={superAt ? 0 : 1}
+        superLeft={plan.supersRestantes}
         disabled={status !== 'ready'}
       />
 
@@ -320,14 +414,26 @@ export default function Discover() {
           if (id) router.push({ pathname: '/chat/[id]', params: { id } });
         }}
       />
-      {filtersOpen && <FilterSheet initial={filters} onClose={() => setFiltersOpen(false)} onApply={applyFilters} />}
+      {filtersOpen && (
+        <FilterSheet
+          initial={filters}
+          plus={plan.plus}
+          onClose={() => setFiltersOpen(false)}
+          onApply={applyFilters}
+          onUpsell={() => {
+            setFiltersOpen(false);
+            setTimeout(() => setUpsell({ title: 'Filtros avanzados', text: 'Con Dogder Plus puedes buscar por edad, nivel de energía y raza.' }), 400);
+          }}
+        />
+      )}
+      <PlusPrompt info={upsell} onClose={() => setUpsell(null)} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingTop: 8 },
-  toolbar: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
+  toolbar: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4 },
   filterBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   filterText: { fontFamily: fonts.bodyBold, fontSize: 14 },
   filterCount: { minWidth: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },

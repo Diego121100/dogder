@@ -80,6 +80,22 @@ Cada foto nueva se revisa automáticamente. Mientras no se revisa, solo la ve su
    pega el contenido de `supabase/functions/revisar-fotos/index.ts` y despliégala.
 4. En los ajustes de la función, apaga **Verify JWT** (la función ya revisa la sesión por su cuenta).
 
+## Dogder Plus
+
+| Gratis | Dogder Plus |
+|---|---|
+| 50 me gusta cada 24 h (rechazar es ilimitado) | Me gusta sin límite |
+| 1 súper hueso cada 24 h | 5 súper huesos cada 24 h |
+| Volver: solo el último, 1 vez al día | Volver sin límite |
+| Filtros: distancia, sexo y tamaño | + edad, energía y razas |
+| Ve cuántos le dieron me gusta | Ve quiénes son y hace match directo |
+| | Modo viaje: buscar perros en otra ciudad |
+
+Todo se valida en el servidor (`supabase/migrations/20261021180000_plus.sql`). Quién es Plus lo dice
+`perfiles.plus_hasta`; la app no lo puede cambiar. Mientras no haya cobro, para probar ejecuta
+`supabase/seed/activar_plus_de_prueba.sql` (30 días) y `supabase/seed/quitar_plus_de_prueba.sql`.
+Cuando la app esté en las tiendas, el cobro se conecta con RevenueCat, que actualizará `plus_hasta`.
+
 ## Moderación
 
 Para darte acceso al panel (Mi perro > Panel de moderación), ejecuta en el SQL Editor, con tu correo:

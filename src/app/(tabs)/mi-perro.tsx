@@ -8,6 +8,7 @@ import { Button, Screen, Title } from '@/components/ui';
 import { sexLabel } from '@/components/Choices';
 import { loadMyProfile, MyProfile } from '@/lib/account';
 import { myStatus } from '@/lib/moderation';
+import { myPlan, Plan } from '@/lib/plan';
 import { ENERGY_NAMES } from '@/lib/discover';
 import { photoUrl } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
@@ -37,11 +38,13 @@ export default function MyDogTab() {
   const { reset } = useSignup();
   const [me, setMe] = useState<MyProfile | null>(null);
   const [isMod, setIsMod] = useState(false);
+  const [plan, setPlan] = useState<Plan | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       loadMyProfile().then(setMe).catch(() => {});
       myStatus().then((s) => setIsMod(!!s?.moderador)).catch(() => {});
+      myPlan().then(setPlan).catch(() => {});
     }, []),
   );
 
@@ -107,6 +110,21 @@ export default function MyDogTab() {
         </View>
       </View>
 
+      <Pressable onPress={() => router.push('/plus')} accessibilityRole="button"
+        style={({ pressed }) => [styles.plus, { backgroundColor: c.ink, opacity: pressed ? 0.85 : 1 }]}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[styles.plusTitle, { color: c.bg }]}>{plan?.plus ? 'Tienes Dogder Plus' : 'Dogder Plus'}</Text>
+          <Text style={[styles.plusSub, { color: c.bg }]}>
+            {plan?.plus
+              ? `Activo hasta el ${plan.plusHasta?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) ?? ''}`
+              : 'Mira quién le dio me gusta a tu perro, sin límites y modo viaje'}
+          </Text>
+        </View>
+        <View style={[styles.plusPill, { backgroundColor: c.ball }]}>
+          <Text style={[styles.plusPillText, { color: c.ballInk }]}>{plan?.plus ? 'Ver' : 'Conocer'}</Text>
+        </View>
+      </Pressable>
+
       {isMod && (
         <View>
           <Text style={[styles.section, { color: c.muted }]}>Equipo de Dogder</Text>
@@ -136,6 +154,11 @@ export default function MyDogTab() {
 }
 
 const styles = StyleSheet.create({
+  plus: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.lg, padding: 16 },
+  plusTitle: { fontFamily: fonts.display, fontSize: 20 },
+  plusSub: { fontFamily: fonts.body, fontSize: 13.5, lineHeight: 19, opacity: 0.85 },
+  plusPill: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  plusPillText: { fontFamily: fonts.bodyBold, fontSize: 14 },
   card: { borderWidth: 1, borderRadius: radius.lg, overflow: 'hidden' },
   photo: { width: '100%', aspectRatio: 4 / 3 },
   name: { fontFamily: fonts.display, fontSize: 26 },

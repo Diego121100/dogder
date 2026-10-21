@@ -61,32 +61,33 @@ export async function fetchNearby(f: Filters = DEFAULT_FILTERS): Promise<NearbyD
 export type SwipeKind = 'like' | 'nope' | 'super';
 export type SwipeResult =
   | { ok: true; matchId: string | null }
-  | { ok: false; reason: 'super_agotado'; availableAt: Date }
+  | { ok: false; reason: 'super_agotado' | 'likes_agotados'; availableAt: Date }
   | { ok: false; reason: 'error'; message: string };
 
 export async function sendSwipe(dogId: string, kind: SwipeKind): Promise<SwipeResult> {
   const { data, error } = await supabase.rpc('dar_like', { p_a_perro: dogId, p_tipo: kind });
   if (error) return { ok: false, reason: 'error', message: error.message };
   const r = data as { ok: boolean; motivo?: string; disponible?: string; match_id?: string | null };
-  if (!r.ok && r.motivo === 'super_agotado') {
-    return { ok: false, reason: 'super_agotado', availableAt: new Date(r.disponible ?? Date.now()) };
+  if (!r.ok && (r.motivo === 'super_agotado' || r.motivo === 'likes_agotados')) {
+    return { ok: false, reason: r.motivo, availableAt: new Date(r.disponible ?? Date.now()) };
   }
   return { ok: true, matchId: r.match_id ?? null };
 }
 
-export async function undoSwipe(dogId: string): Promise<boolean> {
-  const { error } = await supabase.rpc('deshacer_like', { p_a_perro: dogId });
-  return !error;
-}
+export type UndoResult =
+  | { ok: true }
+  | { ok: false; reason: 'deshacer_agotado'; availableAt: Date }
+  | { ok: false; reason: 'solo_ultimo' | 'error' };
 
-/** Cuándo vuelve a estar disponible el súper hueso (null = disponible ya). */
-export async function superAvailableAt(): Promise<Date | null> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return null;
-  const { data } = await supabase.from('perfiles').select('super_hueso_usado').eq('id', u.user.id).single();
-  if (!data?.super_hueso_usado) return null;
-  const next = new Date(new Date(data.super_hueso_usado).getTime() + 24 * 3600_000);
-  return next > new Date() ? next : null;
+/** Deshacer: gratis solo el último y 1 vez cada 24 h; con Plus, sin límite. */
+export async function undoSwipe(dogId: string): Promise<UndoResult> {
+  const { data, error } = await supabase.rpc('deshacer_like', { p_a_perro: dogId });
+  if (error) return { ok: false, reason: 'error' };
+  const r = data as { ok: boolean; motivo?: string; disponible?: string };
+  if (r.ok) return { ok: true };
+  if (r.motivo === 'deshacer_agotado') return { ok: false, reason: 'deshacer_agotado', availableAt: new Date(r.disponible ?? Date.now()) };
+  if (r.motivo === 'solo_ultimo') return { ok: false, reason: 'solo_ultimo' };
+  return { ok: false, reason: 'error' };
 }
 
 export function waitLabel(at: Date): string {

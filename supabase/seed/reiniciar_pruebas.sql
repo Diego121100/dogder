@@ -3,7 +3,8 @@
 --  * Los 9 perros de prueba le dan "me gusta" a tu perro: cualquier "me gusta" tuyo será match.
 --  * Borra lo que ya deslizaste sobre ellos, para que vuelvan a aparecer en Descubrir.
 --  * Borra tus matches y chats con ellos, para empezar de cero.
---  * Te devuelve tu súper hueso del día.
+--  * Te devuelve tus súper huesos y tu "deshacer" del día.
+--  (Necesita la migración de Dogder Plus.)
 -- Tu cuenta y tu perro no se tocan. Pégalo en Supabase > SQL Editor > New query > Run.
 -- =====================================================================
 
@@ -29,7 +30,7 @@ begin
   select unnest(pruebas), mi_perro, 'like'
   on conflict (de_perro, a_perro) do update set tipo = 'like';
 
-  update perfiles set super_hueso_usado = null
+  update perfiles set super_hueso_usado = null, deshacer_usado = null
    where id = (select dueno_id from perros where id = mi_perro);
 
   raise notice 'Listo: los % perros de prueba ya le dieron me gusta a tu perro.', array_length(pruebas, 1);

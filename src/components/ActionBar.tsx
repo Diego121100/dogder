@@ -45,7 +45,7 @@ type Props = {
   onNope: () => void;
   onSuper: () => void;
   onLike: () => void;
-  superLeft: number; // 0 o 1
+  superLeft: number; // súper huesos que quedan hoy (1 gratis, 5 con Plus)
   disabled?: boolean;
 };
 
@@ -83,7 +83,7 @@ export function ActionBar({ onUndo, onNope, onSuper, onLike, superLeft, disabled
           onPress={onSuper}
           disabled={disabled}
           accessibilityRole="button"
-          accessibilityLabel={superLeft ? 'Súper hueso: tienes 1 disponible' : 'Súper hueso: ya lo usaste'}
+          accessibilityLabel={superLeft ? `Súper hueso: tienes ${superLeft} disponible${superLeft === 1 ? '' : 's'}` : 'Súper hueso: ya los usaste'}
           style={btn(50, superLeft ? undefined : { shadowOpacity: 0, borderWidth: 1.5, borderColor: c.line })}
         >
           <BoneIcon color={superLeft ? c.sky : c.muted} />

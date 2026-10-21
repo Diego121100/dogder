@@ -3,16 +3,25 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BreedPicker } from './BreedPicker';
 import { Button } from './ui';
+import { PlusBadge } from './PlusPrompt';
 import { DEFAULT_FILTERS, ENERGY_NAMES, fetchNearby, Filters } from '@/lib/discover';
 import { AGE_GROUPS, DISTANCES } from '@/lib/filters';
 import { fonts, radius, useColors } from '@/theme';
 
 const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-function Label({ children }: { children: string }) {
+function Label({ children, plus }: { children: string; plus?: boolean }) {
   const c = useColors();
-  return <Text style={[styles.label, { color: c.muted }]}>{children}</Text>;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Text style={[styles.label, { color: c.muted }]}>{children}</Text>
+      {plus && <PlusBadge small />}
+    </View>
+  );
 }
+
+/** Sin Plus, los filtros avanzados no se usan. */
+export const stripAdvanced = (f: Filters): Filters => ({ ...f, ages: [], energies: [], breeds: [] });
 
 /**
  * Filtros de Descubrir: distancia, macho o hembra, tamaño, edad, energía y razas.
@@ -21,15 +30,20 @@ function Label({ children }: { children: string }) {
  */
 export function FilterSheet({
   initial,
+  plus,
   onClose,
   onApply,
+  onUpsell,
 }: {
   initial: Filters;
+  /** Edad, energía y razas son de Dogder Plus. */
+  plus: boolean;
   onClose: () => void;
   onApply: (f: Filters) => void;
+  onUpsell: () => void;
 }) {
   const c = useColors();
-  const [f, setF] = useState<Filters>(initial);
+  const [f, setF] = useState<Filters>(plus ? initial : stripAdvanced(initial));
   const [count, setCount] = useState<number | null>(null);
 
   // Cuenta en vivo cuántos perros coinciden (con una pequeña espera para no saturar).
@@ -100,22 +114,31 @@ export function FilterSheet({
           </View>
 
           <View style={styles.group}>
-            <Label>Edad</Label>
-            <View style={styles.wrap}>
-              {chip('Todas', f.ages.length === 0, () => setF({ ...f, ages: [] }))}
-              {AGE_GROUPS.map((a) => chip(a.k, f.ages.includes(a.k), () => setF({ ...f, ages: toggle(f.ages, a.k) }), a.t))}
+            <Label plus={!plus}>Edad</Label>
+            <View style={[styles.wrap, !plus && styles.locked]}>
+              {chip('Todas', f.ages.length === 0, () => (plus ? setF({ ...f, ages: [] }) : onUpsell()))}
+              {AGE_GROUPS.map((a) => chip(a.k, f.ages.includes(a.k), () => (plus ? setF({ ...f, ages: toggle(f.ages, a.k) }) : onUpsell()), a.t))}
             </View>
           </View>
 
           <View style={styles.group}>
-            <Label>Energía</Label>
-            <View style={styles.wrap}>
+            <Label plus={!plus}>Energía</Label>
+            <View style={[styles.wrap, !plus && styles.locked]}>
               {ENERGY_NAMES.map((n, i) =>
-                chip(`${i + 1} · ${n}`, f.energies.includes(i + 1), () => setF({ ...f, energies: toggle(f.energies, i + 1) }), undefined, n),
+                chip(`${i + 1} · ${n}`, f.energies.includes(i + 1), () => (plus ? setF({ ...f, energies: toggle(f.energies, i + 1) }) : onUpsell()), undefined, n),
               )}
             </View>
           </View>
 
+          {!plus ? (
+            <View style={styles.group}>
+              <Label plus>Razas</Label>
+              <Pressable onPress={onUpsell} accessibilityRole="button" accessibilityLabel="Filtrar por raza: función de Dogder Plus"
+                style={[styles.lockedField, styles.locked, { borderColor: c.line, backgroundColor: c.surface }]}>
+                <Text style={[styles.chipText, { color: c.muted }]}>Cualquier raza</Text>
+              </Pressable>
+            </View>
+          ) : (
           <View style={styles.group}>
             <BreedPicker
               label="Razas"
@@ -135,6 +158,7 @@ export function FilterSheet({
               </View>
             )}
           </View>
+          )}
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: c.line }]}>
@@ -158,5 +182,7 @@ const styles = StyleSheet.create({
   chipSub: { fontFamily: fonts.body, fontSize: 11 },
   tag: { borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6 },
   tagText: { fontFamily: fonts.bodyBold, fontSize: 13 },
+  locked: { opacity: 0.55 },
+  lockedField: { borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 12, paddingVertical: 13 },
   footer: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 6, borderTopWidth: StyleSheet.hairlineWidth },
 });

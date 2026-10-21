@@ -240,6 +240,90 @@ await db.query(`delete from fotos_revision where ruta like $1`, [`${D}/%`]);
 ok(!(await as(B, `select * from perros_cercanos(50)`)).rows.some(r => r.perro_id === perros[D]), 'Un perro sin 2 fotos aprobadas no aparece en Descubrir');
 await aprobarFotos();
 
+// Dogder Plus
+// 52 perros de relleno cerca, con 2 fotos aprobadas, para probar los límites.
+await db.exec(`
+  insert into auth.users (id, raw_user_meta_data, email)
+  select ('00000000-0000-0000-0000-' || lpad(i::text, 12, '0'))::uuid,
+         jsonb_build_object('nombre', 'Relleno', 'apellido', 'Prueba', 'fecha_nacimiento', '1990-01-01', 'colonia', 'Roma'),
+         'r' || i || '@x.com'
+    from generate_series(1, 52) i;
+  update perfiles set lat = 19.42, lng = -99.16 where nombre = 'Relleno';
+  insert into perros (dueno_id, nombre, edad, raza, tamano, energia)
+  select id, 'R' || row_number() over (), 2, 'Pug (Carlino)', 'Chico', 2 from perfiles where nombre = 'Relleno';
+  insert into fotos (perro_id, ruta, orden)
+  select p.id, p.id || '/' || o || '.jpg', o from perros p cross join generate_series(0, 1) o where p.nombre like 'R%' and p.raza = 'Pug (Carlino)';
+`);
+await aprobarFotos();
+const relleno = (await db.query(`select id from perros where nombre like 'R%' and raza = 'Pug (Carlino)' order by nombre`)).rows.map(r => r.id);
+const plan = async (u) => (await as(u, `select mi_plan() p`)).rows[0].p;
+let pd = await plan(D);
+ok(pd.plus === false && pd.likes_restantes <= 50 && pd.supers_restantes === 1, 'Una cuenta gratis tiene 50 me gusta y 1 súper hueso cada 24 h');
+// D ya usó 49 me gusta hoy
+await db.query(`delete from likes where de_perro = $1`, [perros[D]]);
+await db.query(`insert into likes (de_perro, a_perro, tipo) select $1, unnest($2::uuid[]), 'like'`, [perros[D], relleno.slice(0, 49)]);
+ok((await as(D, `select dar_like($1, 'like') r`, [relleno[49]])).rows[0].r.ok === true, 'El me gusta número 50 sí se puede');
+const lim = (await as(D, `select dar_like($1, 'like') r`, [relleno[50]])).rows[0].r;
+ok(lim.ok === false && lim.motivo === 'likes_agotados' && lim.disponible, 'El 51 ya no: se acabaron los me gusta del día');
+ok((await as(D, `select dar_like($1, 'nope') r`, [relleno[50]])).rows[0].r.ok === true, 'Rechazar sigue siendo ilimitado');
+ok((await plan(D)).likes_restantes === 0, 'La app ve que no le quedan me gusta');
+await db.query(`update perfiles set plus_hasta = now() + interval '30 days' where id = $1`, [D]);
+ok((await as(D, `select dar_like($1, 'like') r`, [relleno[51]])).rows[0].r.ok === true, 'Con Plus, me gusta sin límite');
+pd = await plan(D);
+ok(pd.plus === true && pd.likes_restantes === null && pd.supers_restantes === 5, 'Plus: sin límite de me gusta y 5 súper huesos');
+await db.query(`delete from likes where de_perro = $1`, [perros[D]]);
+for (let i = 0; i < 5; i++) await as(D, `select dar_like($1, 'super')`, [relleno[i]]);
+ok((await as(D, `select dar_like($1, 'super') r`, [relleno[5]])).rows[0].r.motivo === 'super_agotado', 'El sexto súper hueso del día ya no');
+ok(await fails_(A, `update perfiles set plus_hasta = now() + interval '1 year' where id = '${A}'`), 'Nadie puede darse Plus a sí mismo desde la app');
+
+// Deshacer
+await db.query(`update perfiles set plus_hasta = null, deshacer_usado = null where id = $1`, [D]);
+await db.query(`delete from likes where de_perro = $1`, [perros[D]]);
+await as(D, `select dar_like($1, 'like')`, [relleno[0]]);
+await db.query(`update likes set creado = now() - interval '1 minute' where de_perro = $1`, [perros[D]]);
+await as(D, `select dar_like($1, 'nope')`, [relleno[1]]);
+ok((await as(D, `select deshacer_like($1) r`, [relleno[0]])).rows[0].r.motivo === 'solo_ultimo', 'Gratis: solo se puede deshacer el último');
+ok((await as(D, `select deshacer_like($1) r`, [relleno[1]])).rows[0].r.ok === true, 'Gratis: el último sí se puede deshacer');
+ok((await as(D, `select deshacer_like($1) r`, [relleno[0]])).rows[0].r.motivo === 'deshacer_agotado', 'Gratis: solo 1 deshacer cada 24 h');
+await db.query(`update perfiles set plus_hasta = now() + interval '30 days' where id = $1`, [D]);
+await as(D, `select dar_like($1, 'like')`, [relleno[1]]);
+ok((await as(D, `select deshacer_like($1) r`, [relleno[0]])).rows[0].r.ok === true && (await as(D, `select deshacer_like($1) r`, [relleno[1]])).rows[0].r.ok === true, 'Plus: deshacer sin límite');
+
+// Ver quién te dio like
+await db.query(`delete from likes where a_perro = $1`, [perros[D]]);
+await db.query(`insert into likes (de_perro, a_perro, tipo) values ($1, $3, 'like'), ($2, $3, 'super')`, [relleno[10], relleno[11], perros[D]]);
+await db.query(`update perfiles set plus_hasta = null where id = $1`, [D]);
+ok((await plan(D)).likes_recibidos === 2, 'Gratis: ve cuántos le dieron me gusta');
+ok(await fails_(D, `select * from likes_recibidos()`), 'Gratis: no puede ver quiénes son');
+await db.query(`update perfiles set plus_hasta = now() + interval '30 days' where id = $1`, [D]);
+const quienes = (await as(D, `select * from likes_recibidos()`)).rows;
+ok(quienes.length === 2 && quienes[0].te_dio_super === true && quienes[0].fotos.length === 2, 'Plus: ve quiénes le dieron me gusta (súper hueso primero)');
+ok((await as(D, `select dar_like($1, 'like') r`, [relleno[10]])).rows[0].r.match_id, 'Plus: darle me gusta desde ahí es match directo');
+ok((await plan(D)).likes_recibidos === 1, 'Al deslizarlo, deja de contar como pendiente');
+
+// Filtros avanzados
+await db.query(`update perfiles set lat = 19.42, lng = -99.16, plus_hasta = null where id = $1`, [D]);
+ok((await as(D, `select * from perros_cercanos(10, p_razas => array['Golden Retriever'])`)).rows.length > 0, 'Gratis: el filtro de raza no aplica (es de Plus)');
+await db.query(`update perfiles set plus_hasta = now() + interval '30 days' where id = $1`, [D]);
+ok((await as(D, `select * from perros_cercanos(10, p_razas => array['Golden Retriever'])`)).rows.length === 0, 'Plus: el filtro de raza sí aplica');
+
+// Modo viaje
+await db.query(`update perfiles set plus_hasta = null where id = $1`, [D]);
+ok(await fails_(D, `select activar_viaje(25.67, -100.31, 'Monterrey')`), 'Gratis: no hay modo viaje');
+await db.query(`update perfiles set plus_hasta = now() + interval '30 days' where id = $1`, [D]);
+await as(D, `select activar_viaje(25.67, -100.31, 'Monterrey')`);
+ok((await plan(D)).viaje === 'Monterrey', 'Plus: activa el modo viaje');
+ok((await as(D, `select * from perros_cercanos(50)`)).rows.length === 0, 'En modo viaje ve los perros de allá, no los de su colonia');
+ok(!(await as(relleno.length && (await db.query('select dueno_id from perros where id = $1', [relleno[20]])).rows[0].dueno_id, `select * from perros_cercanos(50)`)).rows.some(r => r.perro_id === perros[D]), 'Y los de su colonia ya no lo ven cerca');
+await db.query(`update perfiles set plus_hasta = now() - interval '1 day' where id = $1`, [D]);
+ok((await as(D, `select * from perros_cercanos(50)`)).rows.length > 0, 'Si se le acaba Plus, vuelve a su ubicación real');
+await as(D, `select quitar_viaje()`);
+ok((await plan(D)).viaje === null, 'Se puede quitar el modo viaje');
+
+// Limpieza
+await db.query(`update perfiles set plus_hasta = null, deshacer_usado = null where id = $1`, [D]);
+await db.query(`delete from auth.users where email like 'r%@x.com'`);
+
 // Eliminar cuenta
 await as(D, `select eliminar_cuenta()`);
 const quedan = (await db.query(`select (select count(*) from perfiles where id = $1)::int p, (select count(*) from perros where dueno_id = $1)::int g, (select count(*) from fotos f join perros x on x.id = f.perro_id where x.dueno_id = $1)::int f`, [D])).rows[0];

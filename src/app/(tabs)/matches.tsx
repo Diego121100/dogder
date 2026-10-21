@@ -6,7 +6,9 @@ import { Image } from 'expo-image';
 import { Button } from '@/components/ui';
 import { listMatches, markMatchesSeen, MatchRow, myUserId, shortTime, useRealtime } from '@/lib/chat';
 import { photoUrl } from '@/lib/photos';
-import { BoneIcon } from '@/components/ActionBar';
+import { BoneIcon, PawIcon } from '@/components/ActionBar';
+import { PlusBadge } from '@/components/PlusPrompt';
+import { myPlan, Plan } from '@/lib/plan';
 import { fonts, useColors } from '@/theme';
 
 /** Matches: arriba los nuevos (sin mensajes), abajo las conversaciones. */
@@ -16,8 +18,10 @@ export default function Matches() {
   const [me, setMe] = useState<string | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [refreshing, setRefreshing] = useState(false);
+  const [plan, setPlan] = useState<Plan | null>(null);
 
   const load = useCallback(() => {
+    myPlan().then(setPlan).catch(() => {});
     Promise.all([listMatches(), myUserId()])
       .then(([r, id]) => {
         setRows(r);
@@ -47,6 +51,23 @@ export default function Matches() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }} edges={['top']}>
       <Text style={[styles.title, { color: c.ink }]} accessibilityRole="header">Matches</Text>
+      {!!plan?.likesRecibidos && (
+        <Pressable onPress={() => router.push('/likes')} accessibilityRole="button"
+          style={({ pressed }) => [styles.likes, { backgroundColor: c.surface, borderColor: c.ball, opacity: pressed ? 0.7 : 1 }]}>
+          <View style={[styles.likesIcon, { backgroundColor: c.ball }]}>
+            <PawIcon color={c.ballInk} size={22} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.likesTitle, { color: c.ink }]}>
+              {plan.likesRecibidos === 1 ? 'A 1 perro le gusta el tuyo' : `A ${plan.likesRecibidos} perros les gusta el tuyo`}
+            </Text>
+            <Text style={[styles.likesSub, { color: c.muted }]}>
+              {plan.plus ? 'Míralos y haz match al instante' : 'Descubre quiénes son con Dogder Plus'}
+            </Text>
+          </View>
+          {!plan.plus && <PlusBadge small />}
+        </Pressable>
+      )}
 
       {status === 'loading' && <ActivityIndicator color={c.ink} style={{ marginTop: 40 }} />}
       {status === 'error' && (
@@ -140,6 +161,10 @@ export default function Matches() {
 }
 
 const styles = StyleSheet.create({
+  likes: { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 8, borderWidth: 2, borderRadius: 16, padding: 12 },
+  likesIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  likesTitle: { fontFamily: fonts.bodyBold, fontSize: 15 },
+  likesSub: { fontFamily: fonts.body, fontSize: 13 },
   title: { fontFamily: fonts.display, fontSize: 28, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   label: { fontFamily: fonts.bodyBold, fontSize: 11.5, letterSpacing: 1, textTransform: 'uppercase', marginTop: 16, marginBottom: 10 },
   fresh: { width: 78, alignItems: 'center', gap: 5 },
