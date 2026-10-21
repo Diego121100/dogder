@@ -55,7 +55,7 @@ export function useModerationGate() {
 
 export type ModAction = 'descartar' | 'advertir' | 'suspender';
 
-export type ReportMessage = { texto: string; creado: string; de_reportado: boolean };
+export type ReportMessage = { texto: string; creado: string; de_reportado: boolean; eliminado?: boolean };
 
 export type ModReport = {
   id: string;

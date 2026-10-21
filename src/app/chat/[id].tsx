@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { fetchMessages, listMatches, markRead, MatchRow, Message, myUserId, sendMessage, useRealtime, sharesContact } from '@/lib/chat';
+import { fetchMessages, listMatches, markRead, MatchRow, Message, myUserId, sendMessage, useRealtime, sharesContact, deleteMessage } from '@/lib/chat';
+import * as Clipboard from 'expo-clipboard';
 import { photoUrl } from '@/lib/photos';
 import { SafetySheet } from '@/components/SafetySheet';
 import { fonts, radius, useColors } from '@/theme';
@@ -81,7 +82,42 @@ export default function Chat() {
 
   const sorted = [...messages].sort((a, b) => a.creado.localeCompare(b.creado));
   // Si alguien comparte teléfono, redes o links, se muestra un recordatorio de seguridad.
-  const showTip = !tipClosed && sorted.some((m) => sharesContact(m.texto));
+  // Recordatorio de seguridad: mientras escribes datos de contacto (antes de enviarlos)
+  // y cuando la otra persona comparte los suyos.
+  const typingContact = sharesContact(text);
+  const showTip = !tipClosed && sorted.some((m) => m.autor_id !== me && !m.eliminado && sharesContact(m.texto));
+
+  // Al mantener apretado un mensaje: copiarlo y, si es mío, eliminarlo.
+  function messageOptions(m: Message) {
+    if (m.pending || m.eliminado) return;
+    const copy = { text: 'Copiar', onPress: () => Clipboard.setStringAsync(m.texto).catch(() => {}) };
+    const cancel = { text: 'Cancelar', style: 'cancel' as const };
+    if (m.autor_id !== me) return Alert.alert('Mensaje', undefined, [copy, cancel]);
+    Alert.alert('Mensaje', undefined, [
+      copy,
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert('¿Eliminar este mensaje?', `Se eliminará para ti y para ${match?.nombre ?? 'la otra persona'}.`, [
+            cancel,
+            {
+              text: 'Eliminar',
+              style: 'destructive',
+              onPress: async () => {
+                const before = messages;
+                setMessages((all) => all.map((x) => (x.id === m.id ? { ...x, eliminado: true, texto: 'Se eliminó este mensaje' } : x)));
+                if (!(await deleteMessage(m.id))) {
+                  setMessages(before);
+                  Alert.alert('No se pudo eliminar', 'Revisa tu conexión e inténtalo de nuevo.');
+                }
+              },
+            },
+          ]),
+      },
+      cancel,
+    ]);
+  }
   const dayLabel = (iso: string) =>
     new Date(iso).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -151,21 +187,45 @@ export default function Chat() {
             }
             renderItem={({ item: m }) => {
               const mine = m.autor_id === me;
+              if (m.eliminado) {
+                return (
+                  <View style={[styles.bubble, styles.deleted, { alignSelf: mine ? 'flex-end' : 'flex-start', borderColor: c.line }]}>
+                    <Text style={[styles.msg, styles.deletedText, { color: c.muted }]}>
+                      {mine ? 'Eliminaste este mensaje' : 'Se eliminó este mensaje'}
+                    </Text>
+                  </View>
+                );
+              }
               return (
-                <View style={[styles.bubble, mine
-                  ? { alignSelf: 'flex-end', backgroundColor: c.ink, borderBottomRightRadius: 6 }
-                  : { alignSelf: 'flex-start', backgroundColor: c.surface, borderColor: c.line, borderWidth: 1, borderBottomLeftRadius: 6 },
-                  m.pending && { opacity: 0.6 }]}>
+                <Pressable
+                  onLongPress={() => messageOptions(m)}
+                  delayLongPress={350}
+                  accessibilityHint={mine ? 'Mantén apretado para copiar o eliminar' : 'Mantén apretado para copiar'}
+                  style={({ pressed }) => [styles.bubble, mine
+                    ? { alignSelf: 'flex-end', backgroundColor: c.ink, borderBottomRightRadius: 6 }
+                    : { alignSelf: 'flex-start', backgroundColor: c.surface, borderColor: c.line, borderWidth: 1, borderBottomLeftRadius: 6 },
+                    m.pending && { opacity: 0.6 }, pressed && { opacity: 0.75 }]}>
                   <Text style={[styles.msg, { color: mine ? c.bg : c.ink }]}>{m.texto}</Text>
                   <Text style={[styles.time, { color: mine ? c.bg : c.muted }]}>
                     {m.pending ? 'Enviando…' : new Date(m.creado).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
-                </View>
+                </Pressable>
               );
             }}
           />
         )}
 
+        {typingContact && (
+          <View style={[styles.tip, styles.tipTyping, { backgroundColor: c.surface, borderColor: c.sky }]} accessibilityLiveRegion="polite">
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.tipTitle, { color: c.ink }]}>¿Seguro que quieres compartir tus datos?</Text>
+              <Text style={[styles.tipText, { color: c.muted }]}>
+                Comparte tu teléfono o tus redes solo cuando conozcas bien a la persona. Organiza el primer paseo en un
+                lugar público y nunca envíes dinero.
+              </Text>
+            </View>
+          </View>
+        )}
         {sendError ? <Text style={[styles.err, { color: c.coral }]}>{sendError}</Text> : null}
         <View style={styles.composer}>
           <TextInput
@@ -218,6 +278,9 @@ const styles = StyleSheet.create({
   msg: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21 },
   time: { fontFamily: fonts.body, fontSize: 10.5, opacity: 0.7, marginTop: 2, alignSelf: 'flex-end' },
   tip: { flexDirection: 'row', gap: 10, borderWidth: 1.5, borderRadius: radius.md, padding: 12, marginTop: 8 },
+  tipTyping: { marginHorizontal: 16, marginTop: 0, marginBottom: 2 },
+  deleted: { borderWidth: 1, borderStyle: 'dashed' },
+  deletedText: { fontStyle: 'italic', fontSize: 14 },
   tipTitle: { fontFamily: fonts.bodyBold, fontSize: 14 },
   tipText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
   err: { fontFamily: fonts.bodyBold, fontSize: 13, paddingHorizontal: 16 },

@@ -181,6 +181,7 @@ export default function Moderation() {
                     : { alignSelf: 'flex-end', backgroundColor: c.bg, borderColor: c.line }]}>
                     <Text style={[styles.who, { color: m.de_reportado ? c.coral : c.muted }]}>
                       {m.de_reportado ? r.perro_nombre ?? 'Reportado' : r.reportador_perro ?? 'Quien reportó'}
+                      {m.eliminado ? ' · lo eliminó después' : ''}
                     </Text>
                     <Text style={[styles.body, { color: c.ink }]}>{m.texto}</Text>
                   </View>

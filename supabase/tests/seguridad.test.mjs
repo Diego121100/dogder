@@ -197,6 +197,21 @@ ok(sent === 'No seas ******', 'El chat tapa groserías en el servidor (no se pue
 await as(A, `update perros set bio = 'Soy un perro culero' where id = $1`, [perros[A]]);
 ok((await db.query('select bio from perros where id = $1', [perros[A]])).rows[0].bio === 'Soy un perro ******', 'También en la descripción del perro');
 
+// Eliminar mensajes
+const msgId = (await as(A, `insert into mensajes (match_id, autor_id, texto) values ($1, $2, 'Mensaje que me arrepentí') returning id`, [mAD, A])).rows[0].id;
+ok(await fails_(D, `select eliminar_mensaje('${msgId}')`), 'Nadie puede eliminar un mensaje que no escribió');
+ok(await fails_(A, `update mensajes set texto = 'otro' where id = '${msgId}'`) || (await db.query('select texto from mensajes where id = $1', [msgId])).rows[0].texto === 'Mensaje que me arrepentí', 'Un mensaje no se puede editar directamente');
+await as(A, `select eliminar_mensaje($1)`, [msgId]);
+const vistoPorD = (await as(D, `select texto, eliminado from mensajes where id = $1`, [msgId])).rows[0];
+ok(vistoPorD.eliminado === true && vistoPorD.texto === 'Se eliminó este mensaje', 'Al eliminarlo, el otro ve "Se eliminó este mensaje"');
+ok((await as(D, `select * from mensajes_eliminados`)).rows.length === 0, 'El texto original no se puede leer desde la app');
+await as(D, `insert into reportes (reportador, reportado, motivo) values ($1, $2, 'Acoso o mensajes ofensivos')`, [D, A]);
+await db.query('insert into moderadores (usuario) values ($1) on conflict do nothing', [B]);
+const repA = (await as(B, `select * from mod_reportes(true)`)).rows.find(r => r.reportado === A);
+ok(repA && repA.mensajes.some(m => m.eliminado && m.texto === 'Mensaje que me arrepentí'), 'Moderación sí ve el texto original de un mensaje eliminado');
+await as(B, `select mod_resolver($1, 'descartar')`, [repA.id]);
+await db.query('delete from moderadores where usuario = $1', [B]);
+
 // Filtro de contenido: fotos
 await as(D, `insert into fotos (perro_id, ruta, orden) values ($1, $2, 2)`, [perros[D], `${D}/nueva.jpg`]);
 ok((await as(B, `select * from fotos where ruta = $1`, [`${D}/nueva.jpg`])).rows.length === 0, 'Una foto sin revisar no la ven los demás');

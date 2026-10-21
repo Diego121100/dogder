@@ -19,7 +19,15 @@ export type MatchRow = {
   super_enviado: boolean;
 };
 
-export type Message = { id: string; match_id: string; autor_id: string; texto: string; creado: string; pending?: boolean };
+export type Message = {
+  id: string;
+  match_id: string;
+  autor_id: string;
+  texto: string;
+  creado: string;
+  eliminado?: boolean;
+  pending?: boolean;
+};
 
 export async function myUserId(): Promise<string | null> {
   const { data } = await supabase.auth.getSession();
@@ -35,7 +43,7 @@ export async function listMatches(): Promise<MatchRow[]> {
 export async function fetchMessages(matchId: string): Promise<Message[]> {
   const { data, error } = await supabase
     .from('mensajes')
-    .select('id, match_id, autor_id, texto, creado')
+    .select('id, match_id, autor_id, texto, creado, eliminado')
     .eq('match_id', matchId)
     .order('creado', { ascending: true })
     .limit(500);
@@ -47,10 +55,17 @@ export async function sendMessage(matchId: string, authorId: string, text: strin
   const { data, error } = await supabase
     .from('mensajes')
     .insert({ match_id: matchId, autor_id: authorId, texto: text })
-    .select('id, match_id, autor_id, texto, creado')
+    .select('id, match_id, autor_id, texto, creado, eliminado')
     .single();
   if (error) throw error;
   return data as Message;
+}
+
+/** Elimina un mensaje mío: los dos verán "Se eliminó este mensaje". */
+export async function deleteMessage(id: string): Promise<boolean> {
+  const { error } = await supabase.rpc('eliminar_mensaje', { p_mensaje: id });
+  if (error && __DEV__) console.warn('[Eliminar mensaje]', error.message);
+  return !error;
 }
 
 /** Avisa a la pestaña de Matches que vuelva a contar (por ejemplo, al leer una conversación). */
@@ -84,6 +99,12 @@ export function useRealtime(onChange: () => void, matchId?: string) {
     const ch = supabase.channel(name).on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'mensajes', ...(matchId ? { filter: `match_id=eq.${matchId}` } : {}) },
+      () => cb.current(),
+    );
+    // Un mensaje eliminado llega como cambio (UPDATE).
+    ch.on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'mensajes', ...(matchId ? { filter: `match_id=eq.${matchId}` } : {}) },
       () => cb.current(),
     );
     if (!matchId) ch.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'matches' }, () => cb.current());
