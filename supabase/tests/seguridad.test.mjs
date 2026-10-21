@@ -212,6 +212,22 @@ ok(repA && repA.mensajes.some(m => m.eliminado && m.texto === 'Mensaje que me ar
 await as(B, `select mod_resolver($1, 'descartar')`, [repA.id]);
 await db.query('delete from moderadores where usuario = $1', [B]);
 
+// Reportar un mensaje (y que la conversación se conserve aunque se bloquee)
+const insulto = (await as(D, `insert into mensajes (match_id, autor_id, texto) values ($1, $2, 'Eres un idiota') returning id`, [mAD, D])).rows[0].id;
+const propio = (await as(A, `insert into mensajes (match_id, autor_id, texto) values ($1, $2, 'Hola') returning id`, [mAD, A])).rows[0].id;
+ok(await fails_(A, `insert into reportes (reportador, reportado, motivo, mensaje_id) values ('${A}', '${D}', 'Otro motivo', '${propio}')`), 'Solo se pueden reportar mensajes de la otra persona');
+ok(await fails_(A, `insert into reportes (reportador, reportado, motivo, conversacion) values ('${A}', '${D}', 'Otro motivo', '[{"texto":"inventado","de_reportado":true}]')`) === false &&
+   !(await db.query(`select conversacion::text c from reportes where conversacion::text like '%inventado%'`)).rows.length, 'La app no puede inventar la conversación del reporte');
+await db.query(`delete from reportes where reportador = $1 and motivo = 'Otro motivo'`, [A]);
+await as(A, `insert into reportes (reportador, reportado, motivo, mensaje_id) values ($1, $2, 'Acoso o mensajes ofensivos', $3)`, [A, D, insulto]);
+await as(A, `insert into bloqueos (bloqueador, bloqueado) values ($1, $2)`, [A, D]);
+await db.query('insert into moderadores (usuario) values ($1) on conflict do nothing', [B]);
+const repMsg = (await as(B, `select * from mod_reportes(true)`)).rows.find(r => r.mensaje_id === insulto);
+ok(repMsg && repMsg.mensajes.some(m => m.id === insulto && m.texto === 'Eres un ******'), 'Moderación ve el mensaje reportado aunque quien reportó bloqueó (y se borró el chat)');
+await as(B, `select mod_resolver($1, 'descartar')`, [repMsg.id]);
+await db.query('delete from moderadores where usuario = $1', [B]);
+await as(A, `delete from bloqueos where bloqueado = $1`, [D]);
+
 // Filtro de contenido: fotos
 await as(D, `insert into fotos (perro_id, ruta, orden) values ($1, $2, 2)`, [perros[D], `${D}/nueva.jpg`]);
 ok((await as(B, `select * from fotos where ruta = $1`, [`${D}/nueva.jpg`])).rows.length === 0, 'Una foto sin revisar no la ven los demás');

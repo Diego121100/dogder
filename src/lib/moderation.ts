@@ -55,7 +55,7 @@ export function useModerationGate() {
 
 export type ModAction = 'descartar' | 'advertir' | 'suspender';
 
-export type ReportMessage = { texto: string; creado: string; de_reportado: boolean; eliminado?: boolean };
+export type ReportMessage = { id?: string; texto: string; creado: string; de_reportado: boolean; eliminado?: boolean };
 
 export type ModReport = {
   id: string;
@@ -76,6 +76,7 @@ export type ModReport = {
   total_reportes: number;
   suspendida: boolean;
   mensajes: ReportMessage[];
+  mensaje_id: string | null;
 };
 
 export async function listReports(pending: boolean): Promise<ModReport[]> {

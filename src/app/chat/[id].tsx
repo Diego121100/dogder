@@ -36,6 +36,7 @@ export default function Chat() {
   const list = useRef<FlatList<Message>>(null);
   const [safety, setSafety] = useState(false);
   const [tipClosed, setTipClosed] = useState(false);
+  const [reportMsg, setReportMsg] = useState<Message | null>(null);
 
   const load = useCallback(() => {
     Promise.all([fetchMessages(id), myUserId()])
@@ -92,7 +93,13 @@ export default function Chat() {
     if (m.pending || m.eliminado) return;
     const copy = { text: 'Copiar', onPress: () => Clipboard.setStringAsync(m.texto).catch(() => {}) };
     const cancel = { text: 'Cancelar', style: 'cancel' as const };
-    if (m.autor_id !== me) return Alert.alert('Mensaje', undefined, [copy, cancel]);
+    if (m.autor_id !== me) {
+      return Alert.alert('Mensaje', undefined, [
+        copy,
+        { text: 'Reportar', style: 'destructive', onPress: () => setTimeout(() => setReportMsg(m), 300) },
+        cancel,
+      ]);
+    }
     Alert.alert('Mensaje', undefined, [
       copy,
       {
@@ -200,7 +207,7 @@ export default function Chat() {
                 <Pressable
                   onLongPress={() => messageOptions(m)}
                   delayLongPress={350}
-                  accessibilityHint={mine ? 'Mantén apretado para copiar o eliminar' : 'Mantén apretado para copiar'}
+                  accessibilityHint={mine ? 'Mantén apretado para copiar o eliminar' : 'Mantén apretado para copiar o reportar'}
                   style={({ pressed }) => [styles.bubble, mine
                     ? { alignSelf: 'flex-end', backgroundColor: c.ink, borderBottomRightRadius: 6 }
                     : { alignSelf: 'flex-start', backgroundColor: c.surface, borderColor: c.line, borderWidth: 1, borderBottomLeftRadius: 6 },
@@ -251,6 +258,26 @@ export default function Chat() {
           dogName={match.nombre}
           visible={safety}
           onClose={() => setSafety(false)}
+          onBlocked={() => {
+            Alert.alert(`Bloqueaste a ${match.nombre}`, 'Ya no se verán entre ustedes.');
+            router.replace('/matches');
+          }}
+          onReported={(blocked) => {
+            Alert.alert('Gracias por avisarnos', blocked
+              ? `Revisaremos tu reporte. También bloqueamos a ${match.nombre}.`
+              : 'Revisaremos tu reporte lo antes posible.');
+            if (blocked) router.replace('/matches');
+          }}
+        />
+      )}
+      {match && reportMsg && (
+        <SafetySheet
+          key={reportMsg.id}
+          message={{ id: reportMsg.id, texto: reportMsg.texto }}
+          dogId={match.perro_id}
+          dogName={match.nombre}
+          visible
+          onClose={() => setReportMsg(null)}
           onBlocked={() => {
             Alert.alert(`Bloqueaste a ${match.nombre}`, 'Ya no se verán entre ustedes.');
             router.replace('/matches');

@@ -14,6 +14,7 @@ declare
   frijol uuid; lucia uuid;
   tamal  uuid; dueno_tamal uuid;
   m uuid;
+  insulto uuid;
 begin
   select u.id into yo from auth.users u join perros g on g.dueno_id = u.id
    where u.email not like '%@prueba.dogder.app' order by g.creado desc limit 1;
@@ -45,10 +46,12 @@ begin
   delete from reportes where reportador in (mariana, lucia) and reportado in (lucia, dueno_tamal);
   update perfiles set suspendida = null, motivo_suspension = null, advertencia = null where id in (lucia, dueno_tamal);
 
-  insert into reportes (reportador, reportado, motivo, detalles, creado) values
-    (mariana, lucia, 'Acoso o mensajes ofensivos', 'Me insultó y luego me quiso vender un cachorro.', now() - interval '30 minutes'),
-    (mariana, lucia, 'Venta o cruza de animales',  '',                                                now() - interval '29 minutes'),
-    (lucia,   dueno_tamal, 'Perfil falso o spam',  'Las fotos parecen de internet.',                  now() - interval '3 hours');
+  select id into insulto from mensajes where match_id = m and autor_id = lucia order by creado limit 1;
+
+  insert into reportes (reportador, reportado, motivo, detalles, creado, mensaje_id) values
+    (mariana, lucia, 'Acoso o mensajes ofensivos', 'Me insultó y luego me quiso vender un cachorro.', now() - interval '30 minutes', insulto),
+    (mariana, lucia, 'Venta o cruza de animales',  '',                                                now() - interval '29 minutes', null),
+    (lucia,   dueno_tamal, 'Perfil falso o spam',  'Las fotos parecen de internet.',                  now() - interval '3 hours', null);
 
   raise notice 'Listo: ya eres moderador y hay 3 reportes de prueba.';
 end $$;

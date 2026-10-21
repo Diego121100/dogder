@@ -19,6 +19,7 @@ export function SafetySheet({
   onClose,
   onBlocked,
   onReported,
+  message,
 }: {
   dogId: string;
   dogName: string;
@@ -26,9 +27,11 @@ export function SafetySheet({
   onClose: () => void;
   onBlocked: () => void;
   onReported: (alsoBlocked: boolean) => void;
+  /** Si se reporta un mensaje en particular (mantener apretado en el chat), se abre directo en "Reportar". */
+  message?: { id: string; texto: string };
 }) {
   const c = useColors();
-  const [step, setStep] = useState<Step>('menu');
+  const [step, setStep] = useState<Step>(message ? 'report' : 'menu');
   const [reason, setReason] = useState<string | null>(null);
   const [details, setDetails] = useState('');
   const [alsoBlock, setAlsoBlock] = useState(true);
@@ -47,7 +50,7 @@ export function SafetySheet({
   async function sendReport() {
     if (!reason) return setError('Elige un motivo para enviar el reporte.');
     setBusy(true);
-    const ok = await reportUser(dogId, reason, details);
+    const ok = await reportUser(dogId, reason, details, message?.id);
     const blocked = ok && alsoBlock ? await blockDogOwner(dogId) : false;
     setBusy(false);
     if (!ok) return setError('No se pudo enviar el reporte. Revisa tu conexión e inténtalo de nuevo.');
@@ -88,7 +91,14 @@ export function SafetySheet({
 
             {step === 'report' && (
               <>
-                <Text style={[styles.title, { color: c.ink }]}>Reportar a {dogName}</Text>
+                <Text style={[styles.title, { color: c.ink }]}>
+                  {message ? `Reportar mensaje de ${dogName}` : `Reportar a ${dogName}`}
+                </Text>
+                {message && (
+                  <View style={[styles.quote, { borderLeftColor: c.coral, backgroundColor: c.bg }]}>
+                    <Text style={[styles.reasonText, { color: c.ink }]} numberOfLines={4}>{message.texto}</Text>
+                  </View>
+                )}
                 <Text style={[styles.optionSub, { color: c.muted, fontSize: 14 }]}>
                   ¿Qué está pasando? Tu reporte es confidencial: nadie sabrá que fuiste tú.
                 </Text>
@@ -161,5 +171,6 @@ const styles = StyleSheet.create({
   radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 10, height: 10, borderRadius: 5 },
   reasonText: { fontFamily: fonts.bodySemi, fontSize: 14.5 },
+  quote: { borderLeftWidth: 3, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10 },
   details: { borderWidth: 1, borderRadius: radius.sm, padding: 12, minHeight: 80, fontFamily: fonts.body, fontSize: 15, textAlignVertical: 'top' },
 });

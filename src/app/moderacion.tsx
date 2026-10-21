@@ -157,6 +157,15 @@ export default function Moderation() {
           <View style={[styles.reason, { backgroundColor: c.bg }]}>
             <Text style={[styles.reasonTitle, { color: c.ink }]}>{r.motivo}</Text>
             {r.detalles ? <Text style={[styles.body, { color: c.ink }]}>“{r.detalles}”</Text> : null}
+            {(() => {
+              const reported = r.mensaje_id ? r.mensajes.find((m) => m.id === r.mensaje_id) : undefined;
+              return reported ? (
+                <View style={[styles.quote, { borderLeftColor: c.coral, backgroundColor: c.surface }]}>
+                  <Text style={[styles.who, { color: c.coral }]}>Mensaje reportado{reported.eliminado ? ' · lo eliminó después' : ''}</Text>
+                  <Text style={[styles.body, { color: c.ink }]}>{reported.texto}</Text>
+                </View>
+              ) : null;
+            })()}
             <Text style={[styles.small, { color: c.muted }]}>
               Reportado por {r.reportador_perro ?? 'una cuenta eliminada'} · {ago(r.creado)}
             </Text>
@@ -175,10 +184,11 @@ export default function Moderation() {
                 </Text>
               </Pressable>
               {open[r.id] &&
-                r.mensajes.map((m, i) => (
-                  <View key={i} style={[styles.bubble, m.de_reportado
+                [...r.mensajes].sort((a, b) => a.creado.localeCompare(b.creado)).map((m, i) => (
+                  <View key={m.id ?? i} style={[styles.bubble, m.de_reportado
                     ? { alignSelf: 'flex-start', backgroundColor: c.bg, borderColor: c.coral }
-                    : { alignSelf: 'flex-end', backgroundColor: c.bg, borderColor: c.line }]}>
+                    : { alignSelf: 'flex-end', backgroundColor: c.bg, borderColor: c.line },
+                    m.id && m.id === r.mensaje_id && { borderWidth: 3, backgroundColor: c.surface }]}>
                     <Text style={[styles.who, { color: m.de_reportado ? c.coral : c.muted }]}>
                       {m.de_reportado ? r.perro_nombre ?? 'Reportado' : r.reportador_perro ?? 'Quien reportó'}
                       {m.eliminado ? ' · lo eliminó después' : ''}
@@ -274,6 +284,7 @@ const styles = StyleSheet.create({
   reason: { borderRadius: radius.md, padding: 12, gap: 4 },
   reasonTitle: { fontFamily: fonts.bodyBold, fontSize: 15 },
   bubble: { maxWidth: '85%', borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
+  quote: { borderLeftWidth: 3, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, gap: 2 },
   who: { fontFamily: fonts.bodyBold, fontSize: 11.5 },
   actions: { flexDirection: 'row', gap: 8 },
   act: { flex: 1, borderWidth: 1.5, borderRadius: radius.sm, paddingVertical: 11, alignItems: 'center' },

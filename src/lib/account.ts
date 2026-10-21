@@ -131,12 +131,14 @@ export const REPORT_REASONS = [
   'Otro motivo',
 ] as const;
 
-export async function reportUser(dogId: string, motivo: string, detalles: string): Promise<boolean> {
+export async function reportUser(dogId: string, motivo: string, detalles: string, mensajeId?: string): Promise<boolean> {
   const { data: s } = await supabase.auth.getSession();
   const me = s.session?.user.id;
   const owner = await ownerOf(dogId);
   if (!me || !owner) return false;
-  const { error } = await supabase.from('reportes').insert({ reportador: me, reportado: owner, motivo, detalles: detalles.trim() });
+  const { error } = await supabase
+    .from('reportes')
+    .insert({ reportador: me, reportado: owner, motivo, detalles: detalles.trim(), ...(mensajeId ? { mensaje_id: mensajeId } : {}) });
   return !error;
 }
 
