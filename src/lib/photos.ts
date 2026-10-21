@@ -83,3 +83,33 @@ export function photoUrl(path: string): string {
   if (/^(https?|file|content|ph|assets-library):/.test(path)) return path;
   return supabase.storage.from('fotos').getPublicUrl(path).data.publicUrl;
 }
+
+/** Algunas fotos no pasaron la revisión y se borraron. `indices` son sus posiciones en la lista que se guardó. */
+export class PhotosRejected extends Error {
+  constructor(public indices: number[]) {
+    super('Fotos rechazadas');
+  }
+}
+
+/** No se pudo revisar las fotos (sin internet o la revisión no está configurada). */
+export class PhotoReviewFailed extends Error {}
+
+/**
+ * Pide al servidor revisar las fotos nuevas de mi perro (función "revisar-fotos").
+ * Hasta que pasan la revisión, solo las ve el dueño. Devuelve las rutas rechazadas.
+ */
+export async function reviewPhotos(): Promise<string[]> {
+  const { data, error } = await supabase.functions.invoke('revisar-fotos', { method: 'POST' });
+  if (error) {
+    if (__DEV__) console.warn('[Revisar fotos]', error);
+    throw new PhotoReviewFailed('No se pudieron revisar las fotos');
+  }
+  return ((data as { rechazadas?: string[] } | null)?.rechazadas ?? []) as string[];
+}
+
+/** Mensaje para la persona cuando se quitaron fotos. */
+export function rejectedMessage(n: number): string {
+  return n === 1
+    ? 'Una foto no cumple las Normas de la comunidad y la quitamos. Elige otra foto de tu perro.'
+    : `${n} fotos no cumplen las Normas de la comunidad y las quitamos. Elige otras fotos de tu perro.`;
+}

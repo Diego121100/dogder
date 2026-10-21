@@ -7,6 +7,7 @@ import { BreedPicker } from '@/components/BreedPicker';
 import { EnergyPicker, SexPicker, SizePicker } from '@/components/Choices';
 import { DogDraft, DogErrors, emptyDog, saveDog, validateDog } from '@/lib/dog';
 import { supabaseConfigured } from '@/lib/supabase';
+import { PhotoReviewFailed, PhotosRejected, rejectedMessage } from '@/lib/photos';
 import { fonts, useColors } from '@/theme';
 
 /** Registro, paso 3 de 4: el perfil del perro. */
@@ -41,7 +42,14 @@ export default function SignupDog() {
       router.replace({ pathname: '/ubicacion', params: { registro: '1' } });
     } catch (e) {
       if (__DEV__) console.warn('[Guardar perro]', e);
-      setServerError('No pudimos guardar el perfil. Revisa tu conexión a internet e inténtalo de nuevo.');
+      if (e instanceof PhotosRejected) {
+        setDog((d) => ({ ...d, photos: d.photos.filter((_, i) => !e.indices.includes(i)) }));
+        setErrors({ photos: rejectedMessage(e.indices.length || 1) });
+      } else if (e instanceof PhotoReviewFailed) {
+        setServerError('No pudimos revisar tus fotos. Inténtalo de nuevo en un momento.');
+      } else {
+        setServerError('No pudimos guardar el perfil. Revisa tu conexión a internet e inténtalo de nuevo.');
+      }
     } finally {
       setSaving(false);
     }

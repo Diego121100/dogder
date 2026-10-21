@@ -129,3 +129,16 @@ export function shortTime(iso: string): string {
   if (d.toDateString() === y.toDateString()) return 'Ayer';
   return d.toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
+
+/**
+ * ¿El mensaje comparte datos de contacto (teléfono, redes, links)?
+ * Se permite, pero el chat muestra un recordatorio de seguridad.
+ */
+const LINK_RE =
+  /https?:\/\/|www\.|\b[\w-]+\.(com|mx|net|org|app|me|ly|link)\b|(^|\s)@[a-z0-9_.]{3,}|\b(whats ?app|whats|wats|wsp|wa\.me|insta(gram)?|ig|telegram|facebook|fb|tiktok|tel[eé]fono|cel(ular)?)\b/i;
+const PHONE_RE = /\+?\d[\d\s().-]{6,}\d/g;
+export function sharesContact(text: string): boolean {
+  if (LINK_RE.test(text)) return true;
+  // Un número cuenta como teléfono si tiene al menos 8 dígitos y no es una fecha.
+  return (text.match(PHONE_RE) ?? []).some((m) => !/^\d{4}-\d{1,2}-\d{1,2}$/.test(m.trim()) && m.replace(/\D/g, '').length >= 8);
+}

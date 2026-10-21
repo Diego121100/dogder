@@ -81,3 +81,17 @@ begin
 
   raise notice 'Listo: 9 perros de prueba alrededor de tu ubicación.';
 end $$;
+
+-- Las fotos de los perros de prueba se dan por aprobadas (si ya existe el filtro de fotos).
+do $$
+begin
+  if to_regclass('public.fotos_revision') is not null then
+    insert into public.fotos_revision (ruta, aprobada, motivo)
+    select f.ruta, true, 'Perro de prueba'
+      from public.fotos f
+      join public.perros p on p.id = f.perro_id
+      join auth.users u on u.id = p.dueno_id
+     where u.email like '%@prueba.dogder.app'
+    on conflict (ruta) do nothing;
+  end if;
+end $$;

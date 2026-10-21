@@ -52,6 +52,9 @@ for (const [id, n] of [[A, 'Floki'], [B, 'Canela'], [D, 'Tamal']]) {
   perros[id] = r.rows[0].id;
   await as(id, `insert into fotos (perro_id, ruta, orden) values ($1, $2, 0), ($1, $3, 1)`, [perros[id], `${id}/a.jpg`, `${id}/b.jpg`]);
 }
+// La función "revisar-fotos" aprobaría estas fotos (aquí se aprueban a mano).
+const aprobarFotos = () => db.query(`insert into fotos_revision (ruta, aprobada) select ruta, true from fotos on conflict do nothing`);
+await aprobarFotos();
 await as(A, `select actualizar_ubicacion(19.41952, -99.16171)`);
 await as(B, `select actualizar_ubicacion(19.43000, -99.15000)`);
 await as(D, `select actualizar_ubicacion(19.35000, -99.16000)`);
@@ -70,6 +73,7 @@ const E = '55555555-5555-5555-5555-555555555555';
 await db.query('insert into auth.users values ($1, $2)', [E, meta('Vecina', '1990-01-01')]);
 const pe = (await as(E, `insert into perros (dueno_id, nombre, edad, raza, tamano, energia) values ($1, 'Lola', 2, 'Pug (Carlino)', 'Chico', 2) returning id`, [E])).rows[0].id;
 await as(E, `insert into fotos (perro_id, ruta, orden) values ($1, 'x/1.jpg', 0), ($1, 'x/2.jpg', 1)`, [pe]);
+await aprobarFotos();
 await as(E, `select actualizar_ubicacion(19.4201, -99.1599)`);
 const lola = (await as(A, `select * from perros_cercanos(10)`)).rows.find(r => r.perro_id === pe);
 ok(lola && lola.cercania === 'muy_cerca', 'Un perro a menos de 500 m aparece como "Muy cerca de ti"');
@@ -181,6 +185,29 @@ ok(await fails_(D, `insert into mensajes (match_id, autor_id, texto) values ('${
 ok(await fails_(B, `select mod_resolver('${r2[1].id}', 'descartar')`) && await fails_(B, `select mod_reactivar('${D}')`), 'Solo un moderador puede resolver o reactivar');
 await as(A, `select mod_reactivar($1)`, [D]);
 ok((await as(B, `select * from perros_cercanos(50)`)).rows.some(r => r.perro_id === perros[D]), 'Al reactivar la cuenta vuelve a aparecer');
+
+// Filtro de contenido: groserías
+const cens = (t) => db.query('select censurar($1) c', [t]).then((r) => r.rows[0].c);
+ok(await cens('Eres un pendejo') === 'Eres un *******', 'Las groserías se tapan con asteriscos');
+ok(await cens('PINCHE perro') === '****** perro', 'Sin importar mayúsculas');
+ok(await cens('Mi perra es una disputa de computadora') === 'Mi perra es una disputa de computadora', 'Palabras normales (y "perra") no se tapan');
+ok(await cens('Qué vergüenza, chingón') === 'Qué vergüenza, *******', 'Solo se tapan palabras completas');
+const sent = (await as(A, `insert into mensajes (match_id, autor_id, texto) values ($1, $2, 'No seas cabrón') returning texto`, [mAD, A])).rows[0].texto;
+ok(sent === 'No seas ******', 'El chat tapa groserías en el servidor (no se puede saltar desde la app)');
+await as(A, `update perros set bio = 'Soy un perro culero' where id = $1`, [perros[A]]);
+ok((await db.query('select bio from perros where id = $1', [perros[A]])).rows[0].bio === 'Soy un perro ******', 'También en la descripción del perro');
+
+// Filtro de contenido: fotos
+await as(D, `insert into fotos (perro_id, ruta, orden) values ($1, $2, 2)`, [perros[D], `${D}/nueva.jpg`]);
+ok((await as(B, `select * from fotos where ruta = $1`, [`${D}/nueva.jpg`])).rows.length === 0, 'Una foto sin revisar no la ven los demás');
+ok((await as(D, `select * from fotos where ruta = $1`, [`${D}/nueva.jpg`])).rows.length === 1, 'El dueño sí ve su foto mientras se revisa');
+ok(!(await as(B, `select * from perros_cercanos(50)`)).rows.find(r => r.perro_id === perros[D])?.fotos.includes(`${D}/nueva.jpg`), 'Descubrir no muestra fotos sin revisar');
+ok(await fails_(D, `insert into fotos_revision (ruta, aprobada) values ('${D}/nueva.jpg', true)`), 'Nadie puede aprobar sus propias fotos desde la app');
+await db.query(`insert into fotos_revision (ruta, aprobada) values ($1, true)`, [`${D}/nueva.jpg`]);
+ok((await as(B, `select * from fotos where ruta = $1`, [`${D}/nueva.jpg`])).rows.length === 1, 'Al aprobarla, ya la ven los demás');
+await db.query(`delete from fotos_revision where ruta like $1`, [`${D}/%`]);
+ok(!(await as(B, `select * from perros_cercanos(50)`)).rows.some(r => r.perro_id === perros[D]), 'Un perro sin 2 fotos aprobadas no aparece en Descubrir');
+await aprobarFotos();
 
 // Eliminar cuenta
 await as(D, `select eliminar_cuenta()`);

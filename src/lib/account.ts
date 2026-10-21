@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { MIN_PHOTOS, uploadPhoto } from './photos';
+import { MIN_PHOTOS, PhotosRejected, reviewPhotos, uploadPhoto } from './photos';
 import type { DogDraft } from './dog';
 
 export type MyProfile = {
@@ -75,8 +75,8 @@ export async function saveDogEdits(userId: string, dogId: string, before: string
   if (error) throw error;
 
   const uploaded: string[] = [];
+  const finalPaths: string[] = [];
   try {
-    const finalPaths: string[] = [];
     for (const p of d.photos) {
       if (isLocal(p)) {
         const path = await uploadPhoto(userId, p);
@@ -98,6 +98,10 @@ export async function saveDogEdits(userId: string, dogId: string, before: string
     if (uploaded.length) await supabase.storage.from('fotos').remove(uploaded);
     throw e;
   }
+
+  // Solo se revisan las fotos nuevas; las que ya estaban aprobadas no cambian.
+  const rejected = await reviewPhotos();
+  if (rejected.length) throw new PhotosRejected(rejected.map((r) => finalPaths.indexOf(r)).filter((i) => i >= 0));
 }
 
 export type Blocked = { usuario: string; perro_nombre: string | null; foto: string | null };

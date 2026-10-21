@@ -13,11 +13,15 @@ Hecha con **Expo (React Native)** y **Supabase**.
 - Matches y chat en tiempo real, con mensajes sin leer y la pestaña de Matches con su contador.
 - Mi perro: editar perfil y fotos, usuarios bloqueados, contacto, documentos legales, cerrar sesión y eliminar cuenta.
 - Reportar y bloquear desde el chat y desde el perfil completo.
+- Filtros en Descubrir: distancia, macho/hembra, tamaño, edad, energía y razas.
+- Panel de moderación (solo moderadores): reportes con la conversación, descartar, advertir, suspender y reactivar.
+- Filtro de contenido: groserías tapadas con **** en el chat y en el perfil, aviso de seguridad al compartir
+  teléfono o redes, y revisión automática de fotos.
 - Términos y Condiciones, Aviso de Privacidad y Normas de la comunidad.
 - La base de datos en `supabase/migrations/`, con reglas de seguridad (RLS) para perfiles, perros, fotos, likes,
   súper hueso, matches, chat, bloqueos, reportes y eliminar cuenta, y 31 pruebas en `supabase/tests/`.
 
-Siguen: filtros. Antes de publicar: cambiar el correo de contacto en `src/content/contacto.ts`.
+Antes de publicar: cambiar el correo de contacto en `src/content/contacto.ts`.
 
 ## Perros de prueba
 
@@ -64,6 +68,25 @@ de verificación es `000000`, pero no se crea ninguna cuenta.
    ```
    Esas dos claves son públicas. **Nunca** pongas en la app la *secret key* ni la contraseña de la base de datos.
 7. Vuelve a ejecutar `npx expo start`.
+
+## Filtro de fotos (OpenAI Moderation)
+
+Cada foto nueva se revisa automáticamente. Mientras no se revisa, solo la ve su dueño; si no pasa, se borra.
+
+1. Crea una cuenta en https://platform.openai.com y una clave en **API keys** (la revisión es gratis).
+2. En Supabase > **Edge Functions** > **Secrets**, agrega `OPENAI_API_KEY` con esa clave.
+   La clave va solo ahí: **nunca** en la app ni en GitHub.
+3. En Supabase > **Edge Functions** > **Deploy a new function** > **Via Editor**: nómbrala `revisar-fotos`,
+   pega el contenido de `supabase/functions/revisar-fotos/index.ts` y despliégala.
+4. En los ajustes de la función, apaga **Verify JWT** (la función ya revisa la sesión por su cuenta).
+
+## Moderación
+
+Para darte acceso al panel (Mi perro > Panel de moderación), ejecuta en el SQL Editor, con tu correo:
+```sql
+insert into public.moderadores (usuario) select id from auth.users where email = 'tu-correo@ejemplo.com';
+```
+Para probarlo con reportes falsos, ejecuta `supabase/seed/moderacion_de_prueba.sql`.
 
 ## Comandos
 

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { MAX_PHOTOS, MIN_PHOTOS, uploadPhoto } from './photos';
+import { MAX_PHOTOS, MIN_PHOTOS, PhotosRejected, reviewPhotos, uploadPhoto } from './photos';
 import type { Sex, Size } from '@/components/Choices';
 
 export type DogDraft = {
@@ -98,4 +98,8 @@ export async function saveDog(d: DogDraft): Promise<void> {
     if (uploaded.length) await supabase.storage.from('fotos').remove(uploaded);
     throw e;
   }
+
+  // Revisión automática de las fotos (desnudos, violencia, etc.).
+  const rejected = await reviewPhotos();
+  if (rejected.length) throw new PhotosRejected(rejected.map((r) => uploaded.indexOf(r)).filter((i) => i >= 0));
 }

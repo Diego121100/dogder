@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Image } from 'expo-image';
 import Svg, { Path } from 'react-native-svg';
-import { fetchMessages, listMatches, markRead, MatchRow, Message, myUserId, sendMessage, useRealtime } from '@/lib/chat';
+import { fetchMessages, listMatches, markRead, MatchRow, Message, myUserId, sendMessage, useRealtime, sharesContact } from '@/lib/chat';
 import { photoUrl } from '@/lib/photos';
 import { SafetySheet } from '@/components/SafetySheet';
 import { fonts, radius, useColors } from '@/theme';
@@ -34,6 +34,7 @@ export default function Chat() {
   const [sendError, setSendError] = useState('');
   const list = useRef<FlatList<Message>>(null);
   const [safety, setSafety] = useState(false);
+  const [tipClosed, setTipClosed] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([fetchMessages(id), myUserId()])
@@ -79,6 +80,8 @@ export default function Chat() {
   }
 
   const sorted = [...messages].sort((a, b) => a.creado.localeCompare(b.creado));
+  // Si alguien comparte teléfono, redes o links, se muestra un recordatorio de seguridad.
+  const showTip = !tipClosed && sorted.some((m) => sharesContact(m.texto));
   const dayLabel = (iso: string) =>
     new Date(iso).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -129,6 +132,22 @@ export default function Chat() {
                   ? `${match.super_recibido ? `${match.nombre} te mandó un súper hueso e hicieron match` : match.super_enviado ? `Le mandaste un súper hueso a ${match.nombre} e hicieron match` : `Hiciste match con ${match.nombre}`} el ${dayLabel(match.creado)}. ¡Saluda a ${match.nombre}!`
                   : 'Hiciste match. ¡Saluda!'}
               </Text>
+            }
+            ListFooterComponent={
+              showTip ? (
+                <View style={[styles.tip, { backgroundColor: c.surface, borderColor: c.sky }]} accessibilityRole="summary">
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Text style={[styles.tipTitle, { color: c.ink }]}>Cuida tus datos</Text>
+                    <Text style={[styles.tipText, { color: c.muted }]}>
+                      Comparte tu teléfono o tus redes solo cuando conozcas bien a la persona. Organiza el primer paseo en
+                      un lugar público y nunca envíes dinero.
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setTipClosed(true)} accessibilityRole="button" accessibilityLabel="Cerrar aviso" hitSlop={10}>
+                    <Text style={[styles.tipTitle, { color: c.muted }]}>×</Text>
+                  </Pressable>
+                </View>
+              ) : null
             }
             renderItem={({ item: m }) => {
               const mine = m.autor_id === me;
@@ -198,6 +217,9 @@ const styles = StyleSheet.create({
   bubble: { maxWidth: '80%', borderRadius: 18, paddingHorizontal: 13, paddingVertical: 8 },
   msg: { fontFamily: fonts.body, fontSize: 15, lineHeight: 21 },
   time: { fontFamily: fonts.body, fontSize: 10.5, opacity: 0.7, marginTop: 2, alignSelf: 'flex-end' },
+  tip: { flexDirection: 'row', gap: 10, borderWidth: 1.5, borderRadius: radius.md, padding: 12, marginTop: 8 },
+  tipTitle: { fontFamily: fonts.bodyBold, fontSize: 14 },
+  tipText: { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
   err: { fontFamily: fonts.bodyBold, fontSize: 13, paddingHorizontal: 16 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   input: { flex: 1, borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontFamily: fonts.body, fontSize: 15.5, maxHeight: 120 },

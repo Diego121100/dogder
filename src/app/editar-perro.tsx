@@ -8,6 +8,7 @@ import { BreedPicker } from '@/components/BreedPicker';
 import { EnergyPicker, SexPicker, SizePicker } from '@/components/Choices';
 import { DogDraft, DogErrors, validateDog } from '@/lib/dog';
 import { loadMyProfile, saveDogEdits } from '@/lib/account';
+import { PhotoReviewFailed, PhotosRejected, rejectedMessage } from '@/lib/photos';
 import { fonts, useColors } from '@/theme';
 
 /** Editar el perfil de mi perro y sus fotos. */
@@ -19,15 +20,17 @@ export default function EditDog() {
   const [serverError, setServerError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
+  const load = (afterLoad?: () => void) => {
     loadMyProfile()
       .then((me) => {
         if (!me?.dog) return;
         ids.current = { userId: me.userId, dogId: me.dog.id, before: me.dog.draft.photos };
         setDog(me.dog.draft);
+        afterLoad?.();
       })
       .catch(() => setServerError('No pudimos cargar el perfil. Revisa tu conexión.'));
-  }, []);
+  };
+  useEffect(load, []);
 
   const set = (patch: Partial<DogDraft>) => {
     setDog((d) => (d ? { ...d, ...patch } : d));
@@ -50,7 +53,15 @@ export default function EditDog() {
       router.back();
     } catch (e) {
       if (__DEV__) console.warn('[Editar perro]', e);
-      setServerError('No pudimos guardar los cambios. Revisa tu conexión a internet e inténtalo de nuevo.');
+      if (e instanceof PhotosRejected) {
+        // Los demás cambios sí se guardaron: se recarga el perfil ya sin las fotos rechazadas.
+        const n = e.indices.length || 1;
+        load(() => setErrors({ photos: rejectedMessage(n) }));
+      } else if (e instanceof PhotoReviewFailed) {
+        load(() => setServerError('Guardamos tus cambios. Tus fotos nuevas se están revisando: mientras tanto solo las ves tú. Vuelve a guardar en un momento para terminar la revisión.'));
+      } else {
+        setServerError('No pudimos guardar los cambios. Revisa tu conexión a internet e inténtalo de nuevo.');
+      }
     } finally {
       setSaving(false);
     }
