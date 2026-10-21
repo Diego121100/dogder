@@ -7,6 +7,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Button, Screen, Title } from '@/components/ui';
 import { sexLabel } from '@/components/Choices';
 import { loadMyProfile, MyProfile } from '@/lib/account';
+import { myStatus } from '@/lib/moderation';
 import { ENERGY_NAMES } from '@/lib/discover';
 import { photoUrl } from '@/lib/photos';
 import { supabase } from '@/lib/supabase';
@@ -35,10 +36,12 @@ export default function MyDogTab() {
   const c = useColors();
   const { reset } = useSignup();
   const [me, setMe] = useState<MyProfile | null>(null);
+  const [isMod, setIsMod] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       loadMyProfile().then(setMe).catch(() => {});
+      myStatus().then((s) => setIsMod(!!s?.moderador)).catch(() => {});
     }, []),
   );
 
@@ -103,6 +106,15 @@ export default function MyDogTab() {
           <Text style={[styles.ownerSub, { color: c.muted }]}>{me ? `${me.colonia} · Miembro desde ${me.desde}` : ' '}</Text>
         </View>
       </View>
+
+      {isMod && (
+        <View>
+          <Text style={[styles.section, { color: c.muted }]}>Equipo de Dogder</Text>
+          <View style={[styles.box, { backgroundColor: c.surface, borderColor: c.line, paddingVertical: 0 }]}>
+            <Row label="Panel de moderación" onPress={() => router.push('/moderacion')} />
+          </View>
+        </View>
+      )}
 
       <View>
         <Text style={[styles.section, { color: c.muted }]}>Seguridad y ayuda</Text>

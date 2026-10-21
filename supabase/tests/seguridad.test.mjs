@@ -146,6 +146,42 @@ await as(D, `select dar_like($1, 'super')`, [perros[A]]);
 await as(D, `select deshacer_like($1)`, [perros[A]]);
 ok((await db.query('select super_hueso_usado from perfiles where id = $1', [D])).rows[0].super_hueso_usado === null, 'Volver después de un súper hueso lo recupera');
 
+// Panel de moderación
+await as(A, `select dar_like($1, 'like')`, [perros[D]]);
+const mAD = (await as(D, `select dar_like($1, 'like') r`, [perros[A]])).rows[0].r.match_id;
+await as(D, `insert into mensajes (match_id, autor_id, texto) values ($1, $2, 'Mensaje grosero')`, [mAD, D]);
+ok(await fails_(A, `select * from mod_reportes()`), 'Sin ser moderador no se puede abrir el panel');
+ok((await as(A, `select * from moderadores`)).rows.length === 0, 'La lista de moderadores no se puede leer desde la app');
+ok(await fails_(D, `update perfiles set suspendida = null, advertencia = null where id = '${D}'`), 'Nadie puede quitarse una suspensión o advertencia por su cuenta');
+await db.query('insert into moderadores (usuario) values ($1)', [A]);
+ok((await as(A, `select * from mi_estado()`)).rows[0].moderador === true, 'La app sabe que Diego es moderador');
+ok((await as(B, `select * from mi_estado()`)).rows[0].moderador === false, 'Los demás no son moderadores');
+let pend = (await as(A, `select * from mod_reportes(true)`)).rows;
+const rep = pend.find(r => r.reportado === D);
+ok(rep && rep.perro_nombre === 'Tamal' && rep.reportador_perro === 'Floki' && rep.total_reportes === 1, 'El moderador ve el reporte con el perro reportado y quién lo reportó');
+ok(rep && rep.mensajes.length === 1 && rep.mensajes[0].de_reportado === true, 'El moderador ve la conversación entre ambos');
+await as(A, `select mod_resolver($1, 'advertir', 'Evita los mensajes ofensivos.')`, [rep.id]);
+let est = (await as(D, `select * from mi_estado()`)).rows[0];
+ok(est.advertencia === 'Evita los mensajes ofensivos.' && !est.suspendida, 'Al advertir, la persona ve el mensaje al abrir la app');
+await as(D, `select leer_advertencia()`);
+ok((await as(D, `select * from mi_estado()`)).rows[0].advertencia === null, 'Al tocar "Entendido" la advertencia ya no vuelve a salir');
+ok((await as(A, `select * from mod_reportes(true)`)).rows.length === 0 && (await as(A, `select * from mod_reportes(false)`)).rows[0].accion === 'advertir', 'El reporte pasa a Resueltos');
+await as(B, `insert into reportes (reportador, reportado, motivo) values ($1, $2, 'Acoso o mensajes ofensivos')`, [B, D]);
+await as(B, `insert into reportes (reportador, reportado, motivo) values ($1, $2, 'Otro motivo')`, [B, D]);
+const r2 = (await as(A, `select * from mod_reportes(true)`)).rows;
+ok(r2.length === 2 && r2[0].total_reportes === 3, 'Se ve cuántos reportes acumula la persona');
+await as(A, `select mod_resolver($1, 'suspender', 'Acoso repetido')`, [r2[0].id]);
+ok((await as(A, `select * from mod_reportes(true)`)).rows.length === 0, 'Al suspender se cierran todos sus reportes pendientes');
+est = (await as(D, `select * from mi_estado()`)).rows[0];
+ok(est.suspendida === true && est.motivo_suspension === 'Acoso repetido', 'La persona suspendida lo sabe al abrir la app');
+ok((await as(B, `select * from perros_cercanos(50)`)).rows.every(r => r.perro_id !== perros[D]), 'Un perro suspendido ya no aparece en Descubrir');
+ok((await as(D, `select * from perros_cercanos(50)`)).rows.length === 0, 'Una cuenta suspendida no ve perros');
+ok(await fails_(D, `select dar_like('${perros[B]}', 'like')`), 'Una cuenta suspendida no puede deslizar');
+ok(await fails_(D, `insert into mensajes (match_id, autor_id, texto) values ('${mAD}', '${D}', 'hola')`), 'Una cuenta suspendida no puede escribir');
+ok(await fails_(B, `select mod_resolver('${r2[1].id}', 'descartar')`) && await fails_(B, `select mod_reactivar('${D}')`), 'Solo un moderador puede resolver o reactivar');
+await as(A, `select mod_reactivar($1)`, [D]);
+ok((await as(B, `select * from perros_cercanos(50)`)).rows.some(r => r.perro_id === perros[D]), 'Al reactivar la cuenta vuelve a aparecer');
+
 // Eliminar cuenta
 await as(D, `select eliminar_cuenta()`);
 const quedan = (await db.query(`select (select count(*) from perfiles where id = $1)::int p, (select count(*) from perros where dueno_id = $1)::int g, (select count(*) from fotos f join perros x on x.id = f.perro_id where x.dueno_id = $1)::int f`, [D])).rows[0];

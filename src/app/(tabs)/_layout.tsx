@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { PawIcon } from '@/components/ActionBar';
 import { useMatchesBadge } from '@/lib/chat';
+import { useModerationGate } from '@/lib/moderation';
 import { fonts, useColors } from '@/theme';
 
 function ChatIcon({ color }: { color: string }) {
@@ -24,6 +25,7 @@ function PersonIcon({ color }: { color: string }) {
 export default function TabsLayout() {
   const c = useColors();
   const badge = useMatchesBadge();
+  useModerationGate(); // cuenta suspendida o advertencia pendiente
   return (
     <Tabs
       screenOptions={{

@@ -87,6 +87,7 @@ export const LEGAL: Record<LegalKey, LegalDoc> = {
             'Cumplir obligaciones legales.',
           ] },
           'Estas finalidades son indispensables para darte el servicio.',
+          'Cuando alguien reporta a otro usuario, nuestro equipo de moderación puede revisar el perfil reportado y la conversación entre ambos, únicamente para resolver ese reporte. Fuera de esos casos, nadie del equipo lee tus mensajes.',
         ],
       },
       { title: 'Finalidades voluntarias', body: [`Si nos lo permites, también usaremos tus datos para enviarte novedades y promociones de Dogder, invitarte a encuestas y elaborar estadísticas para mejorar la aplicación. Puedes negarte en cualquier momento escribiendo a ${CONTACTO}. Negarte no afecta tu uso de Dogder.`] },
