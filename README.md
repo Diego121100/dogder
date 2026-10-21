@@ -89,7 +89,7 @@ Cada foto nueva se revisa automáticamente. Mientras no se revisa, solo la ve su
 | Volver: solo el último, 1 vez al día | Volver sin límite |
 | Filtros: distancia, sexo y tamaño | + edad, energía y razas |
 | Ve cuántos le dieron me gusta | Ve quiénes son y hace match directo |
-| | Modo viaje: buscar perros en otra ciudad |
+| | Buscar en otra zona (ciudad o colonia) |
 
 Todo se valida en el servidor (`supabase/migrations/20261021180000_plus.sql`). Quién es Plus lo dice
 `perfiles.plus_hasta`; la app no lo puede cambiar. Mientras no haya cobro, para probar ejecuta

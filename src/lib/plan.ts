@@ -79,10 +79,10 @@ export async function likesReceived(): Promise<NearbyDog[]> {
   return dogs;
 }
 
-/** Modo viaje (Plus): buscar perros como si estuvieras en otro lugar. */
+/** Buscar en otra zona (Plus): ver perros de otra ciudad o colonia. */
 export async function setTravel(lat: number, lng: number, name: string): Promise<boolean> {
   const { error } = await supabase.rpc('activar_viaje', { p_lat: lat, p_lng: lng, p_nombre: name });
-  if (error && __DEV__) console.warn('[Modo viaje]', error.message);
+  if (error && __DEV__) console.warn('[Otra zona]', error.message);
   return !error;
 }
 
@@ -98,7 +98,7 @@ export const PLUS_FEATURES = [
   { key: 'super', title: '5 súper huesos al día', text: 'En lugar de 1. Destaca con más perros.' },
   { key: 'undo', title: 'Deshacer sin límite', text: '¿Te equivocaste de lado? Regresa las veces que quieras.' },
   { key: 'filters', title: 'Filtros avanzados', text: 'Busca por edad, nivel de energía y raza.' },
-  { key: 'travel', title: 'Modo viaje', text: '¿Te vas de vacaciones con tu perro? Busca amigos en otra ciudad antes de llegar.' },
+  { key: 'travel', title: 'Buscar en otra zona', text: 'Elige otra ciudad o colonia y conoce a los perros de ahí.' },
 ] as const;
 
 export type PlusFeature = (typeof PLUS_FEATURES)[number]['key'];

@@ -100,7 +100,7 @@ export default function Discover() {
   }
   const nFilters = activeFilters(filters, plan.plus);
 
-  // Al volver a esta pestaña (por ejemplo, después de cambiar el modo viaje o activar Plus),
+  // Al volver a esta pestaña (por ejemplo, después de cambiar la zona de búsqueda o activar Plus),
   // si cambió dónde buscar o el plan, se vuelven a buscar perros.
   useFocusEffect(
     useCallback(() => {
@@ -332,7 +332,7 @@ export default function Discover() {
         <Pressable
           onPress={() => router.push('/viaje')}
           accessibilityRole="button"
-          accessibilityLabel={plan.viaje ? `Modo viaje: ${plan.viaje}` : 'Modo viaje'}
+          accessibilityLabel={plan.viaje ? `Buscando en ${plan.viaje}. Toca para cambiar la zona` : 'Buscar en otra zona'}
           style={({ pressed }) => [styles.filterBtn, { flexShrink: 1, borderColor: plan.viaje ? c.ink : c.line, backgroundColor: plan.viaje ? c.ink : c.surface, opacity: pressed ? 0.7 : 1 }]}
         >
           <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={plan.viaje ? c.ball : c.ink} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">

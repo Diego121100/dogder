@@ -117,7 +117,7 @@ export default function MyDogTab() {
           <Text style={[styles.plusSub, { color: c.bg }]}>
             {plan?.plus
               ? `Activo hasta el ${plan.plusHasta?.toLocaleDateString('es-MX', { day: 'numeric', month: 'long' }) ?? ''}`
-              : 'Mira quién le dio me gusta a tu perro, sin límites y modo viaje'}
+              : 'Mira quién le dio me gusta a tu perro, sin límites y busca en otras zonas'}
           </Text>
         </View>
         <View style={[styles.plusPill, { backgroundColor: c.ball }]}>

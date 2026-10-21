@@ -23,7 +23,7 @@ const CITIES = [
 
 type Place = { name: string; lat: number; lng: number };
 
-/** Modo viaje (Dogder Plus): buscar perros como si estuvieras en otra ciudad o colonia. */
+/** Buscar en otra zona (Dogder Plus): ver perros de otra ciudad o colonia. */
 export default function Travel() {
   const c = useColors();
   const { plan } = usePlan();
@@ -86,17 +86,14 @@ export default function Travel() {
         </Svg>
       </Pressable>
       <PlusBadge />
-      <Title>Modo viaje</Title>
-      <Lead>
-        ¿Te vas de vacaciones con tu perro o te mudas pronto? Busca perros en otra ciudad o colonia antes de llegar.
-        Mientras esté activo, los perros de allá también te verán cerca.
-      </Lead>
+      <Title>Buscar en otra zona</Title>
+      <Lead>Elige una ciudad o colonia y te mostramos los perros de esa zona.</Lead>
 
       {!plan && <ActivityIndicator color={c.ink} />}
 
       {plan && !plan.plus && (
         <View style={{ gap: 10 }}>
-          <Lead>El modo viaje es parte de Dogder Plus.</Lead>
+          <Lead>Buscar en otra zona es parte de Dogder Plus.</Lead>
           <Button title="Conocer Dogder Plus" variant="ball" onPress={() => router.replace('/plus')} />
         </View>
       )}
@@ -132,7 +129,7 @@ export default function Travel() {
             {found && (
               <View style={[styles.current, { backgroundColor: c.surface, borderColor: c.ball }]}>
                 <Text style={[styles.place, { color: c.ink }]}>{found.name}</Text>
-                <Button title={`Buscar perros en ${found.name}`} variant="ball" loading={saving} onPress={() => go(found)} />
+                <Button title="Buscar en esta zona" variant="ball" loading={saving} onPress={() => go(found)} />
               </View>
             )}
           </View>
