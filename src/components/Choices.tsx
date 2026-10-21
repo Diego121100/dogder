@@ -47,6 +47,48 @@ export function SizePicker({ value, onChange }: { value: Size; onChange: (v: Siz
 export type Sex = 'Macho' | 'Hembra';
 export const sexLabel = (s: Sex) => (s === 'Macho' ? '♂ Macho' : '♀ Hembra');
 
+/** A quién quiere conocer el perro (como "busco mujeres" en Tinder). */
+export type Seeking = 'Hembra' | 'Macho' | 'Ambos';
+export const SEEKING: { v: Seeking; t: string }[] = [
+  { v: 'Hembra', t: '♀ Hembras' },
+  { v: 'Macho', t: '♂ Machos' },
+  { v: 'Ambos', t: 'Ambos' },
+];
+export const seekingLabel = (s: Seeking) =>
+  s === 'Ambos' ? 'Busca machos y hembras' : s === 'Hembra' ? 'Busca hembras' : 'Busca machos';
+
+export function SeekingPicker({ value, onChange, error, label = '¿A quién quiere conocer?' }: {
+  value: Seeking | '';
+  onChange: (v: Seeking) => void;
+  error?: string;
+  label?: string;
+}) {
+  const c = useColors();
+  return (
+    <View style={{ gap: 5 }}>
+      <Label>{label}</Label>
+      <View style={{ flexDirection: 'row', gap: 8 }} accessibilityRole="radiogroup">
+        {SEEKING.map((s) => {
+          const on = s.v === value;
+          return (
+            <Pressable
+              key={s.v}
+              onPress={() => onChange(s.v)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: on }}
+              accessibilityLabel={s.t}
+              style={[styles.seg, { borderColor: on ? c.ball : error ? c.coral : c.line, backgroundColor: on ? c.ball : c.surface }]}
+            >
+              <Text style={[styles.segText, { color: on ? c.ballInk : c.ink }]}>{s.t}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <ErrorText>{error}</ErrorText>
+    </View>
+  );
+}
+
 /** Macho / Hembra. */
 export function SexPicker({ value, onChange, error }: { value: Sex | ''; onChange: (v: Sex) => void; error?: string }) {
   const c = useColors();

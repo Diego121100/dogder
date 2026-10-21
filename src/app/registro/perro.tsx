@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { Button, DemoBanner, ErrorText, Field, Lead, Row, Screen, Steps, Title } from '@/components/ui';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { BreedPicker } from '@/components/BreedPicker';
-import { EnergyPicker, SexPicker, SizePicker } from '@/components/Choices';
+import { EnergyPicker, SeekingPicker, SexPicker, SizePicker } from '@/components/Choices';
 import { DogDraft, DogErrors, emptyDog, saveDog, validateDog } from '@/lib/dog';
 import { supabaseConfigured } from '@/lib/supabase';
 import { PhotoReviewFailed, PhotosRejected, rejectedMessage } from '@/lib/photos';
@@ -81,6 +81,7 @@ export default function SignupDog() {
           error={errors.age} placeholder="3" keyboardType="number-pad" maxLength={2} />
       </Row>
       <SexPicker value={dog.sex} onChange={(sex) => set({ sex })} error={errors.sex} />
+      <SeekingPicker value={dog.seeking} onChange={(seeking) => set({ seeking })} error={errors.seeking} />
       <BreedPicker value={dog.breed} onChange={(breed) => set({ breed })} error={errors.breed} />
       <SizePicker value={dog.size} onChange={(size) => set({ size })} />
       <EnergyPicker value={dog.energy} onChange={(energy) => set({ energy })} error={errors.energy} />

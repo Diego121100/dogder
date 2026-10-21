@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import type { Seeking } from '@/components/Choices';
 import type { Cercania } from './distance';
 
 /** Un perro en Descubrir, tal como lo manda el servidor (sin coordenadas de nadie). */
@@ -25,7 +26,7 @@ export type Filters = {
   ages: string[];
   energies: number[];
   breeds: string[];
-  sexes: string[];
+  sexes: string[]; // ya no se usa: ahora cada perro dice a quién busca (perros.busca)
 };
 
 export const DEFAULT_FILTERS: Filters = {
@@ -42,7 +43,8 @@ const cache = new Map<string, NearbyDog>();
 export const cachedDog = (id: string) => cache.get(id);
 export const rememberDog = (d: NearbyDog) => cache.set(d.perro_id, d);
 
-export async function fetchNearby(f: Filters = DEFAULT_FILTERS): Promise<NearbyDog[]> {
+/** `busca` solo se pasa para la vista previa de los filtros (antes de guardarlo). */
+export async function fetchNearby(f: Filters = DEFAULT_FILTERS, busca?: Seeking): Promise<NearbyDog[]> {
   const { data, error } = await supabase.rpc('perros_cercanos', {
     p_max_km: f.maxKm,
     p_tamanos: f.sizes,
@@ -50,7 +52,7 @@ export async function fetchNearby(f: Filters = DEFAULT_FILTERS): Promise<NearbyD
     p_energias: f.energies.length ? f.energies : null,
     p_razas: f.breeds.length ? f.breeds : null,
     p_limite: 20,
-    p_sexos: f.sexes.length ? f.sexes : null,
+    ...(busca ? { p_busca: busca } : {}),
   });
   if (error) throw error;
   const dogs = (data ?? []) as NearbyDog[];
@@ -98,18 +100,26 @@ export function waitLabel(at: Date): string {
 }
 
 /** Datos de mi perro para la pantalla de match. */
-export type MyDog = { id: string; nombre: string; sexo: 'Macho' | 'Hembra' | null; foto?: string };
+export type MyDog = { id: string; nombre: string; sexo: 'Macho' | 'Hembra' | null; busca: Seeking; foto?: string };
 export async function myDogSummary(): Promise<MyDog | null> {
   const { data: u } = await supabase.auth.getUser();
   if (!u.user) return null;
   const { data } = await supabase
     .from('perros')
-    .select('id, nombre, sexo, fotos(ruta, orden)')
+    .select('id, nombre, sexo, busca, fotos(ruta, orden)')
     .eq('dueno_id', u.user.id)
     .order('orden', { referencedTable: 'fotos' })
     .limit(1, { referencedTable: 'fotos' })
     .single();
-  return data ? { id: data.id, nombre: data.nombre, sexo: data.sexo, foto: data.fotos?.[0]?.ruta } : null;
+  return data
+    ? { id: data.id, nombre: data.nombre, sexo: data.sexo, busca: (data.busca ?? 'Ambos') as Seeking, foto: data.fotos?.[0]?.ruta }
+    : null;
+}
+
+/** Cambia a quién busca mi perro (Hembras, Machos o Ambos). */
+export async function setMySeeking(dogId: string, busca: Seeking): Promise<boolean> {
+  const { error } = await supabase.from('perros').update({ busca }).eq('id', dogId);
+  return !error;
 }
 
 /** Guarda el sexo de mi perro (para perfiles creados antes de que existiera esta pregunta). */

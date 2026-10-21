@@ -12,6 +12,7 @@ import { SuperSent } from '@/components/SuperSent';
 import { Toast, useToast } from '@/components/Toast';
 import { FilterSheet } from '@/components/FilterSheet';
 import { PlusPrompt, PlusPromptInfo } from '@/components/PlusPrompt';
+import type { Seeking } from '@/components/Choices';
 import {
   dogName,
   fetchNearby,
@@ -22,6 +23,7 @@ import {
   onSuperReceived,
   sendSwipe,
   setMyDogSex,
+  setMySeeking,
   SwipeKind,
   takePendingSwipe,
   undoSwipe,
@@ -84,8 +86,12 @@ export default function Discover() {
   };
 
   // Al aplicar filtros se guardan en el teléfono y se vuelven a buscar perros.
-  function applyFilters(f: Filters) {
+  async function applyFilters(f: Filters, seeking: Seeking) {
     setFiltersOpen(false);
+    if (mine && seeking !== mine.busca) {
+      if (await setMySeeking(mine.id, seeking)) setMine({ ...mine, busca: seeking });
+      else toast.show('No se pudo guardar a quién buscas. Revisa tu conexión.');
+    }
     setFilters(f);
     saveFilters(f);
     filtersRef.current = f;
@@ -417,6 +423,7 @@ export default function Discover() {
       {filtersOpen && (
         <FilterSheet
           initial={filters}
+          seeking={mine?.busca ?? 'Ambos'}
           plus={plan.plus}
           onClose={() => setFiltersOpen(false)}
           onApply={applyFilters}

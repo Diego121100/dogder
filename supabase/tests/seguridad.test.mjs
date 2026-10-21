@@ -86,8 +86,18 @@ ok((await as(A, `select * from perros_cercanos(3)`)).rows.every(r => r.distancia
 ok((await as(A, `select * from perros_cercanos(10, array['Chico'])`)).rows.length === 0, 'El filtro de tamaño funciona');
 await db.query(`update perros set sexo = 'Hembra' where id = $1`, [perros[B]]);
 await db.query(`update perros set sexo = 'Macho' where id = $1`, [perros[D]]);
-const hembras = (await as(A, `select * from perros_cercanos(10, p_sexos => array['Hembra'])`)).rows;
-ok(hembras.length === 1 && hembras[0].sexo === 'Hembra', 'El filtro de macho o hembra funciona');
+// A quién busca cada perro (en los dos sentidos)
+await db.query(`update perros set sexo = 'Macho' where id = $1`, [perros[A]]);
+await as(A, `update perros set busca = 'Hembra' where id = $1`, [perros[A]]);
+let vistos = (await as(A, `select * from perros_cercanos(10)`)).rows;
+ok(vistos.length === 1 && vistos[0].sexo === 'Hembra', 'Un macho que busca hembras solo ve hembras');
+await as(B, `update perros set busca = 'Hembra' where id = $1`, [perros[B]]);
+ok((await as(A, `select * from perros_cercanos(10)`)).rows.length === 0, 'Y no ve a una hembra que solo busca hembras (tiene que coincidir en los dos sentidos)');
+ok((await as(B, `select * from perros_cercanos(10)`)).rows.every(r => r.sexo === 'Hembra'), 'Ella tampoco lo ve a él');
+ok((await as(A, `select * from perros_cercanos(10, p_busca => 'Ambos')`)).rows.some(r => r.perro_id === perros[D]), 'La vista previa de los filtros puede probar otra opción sin guardarla');
+ok(await fails_(A, `update perros set busca = 'Nadie' where id = '${perros[A]}'`), 'Solo se puede buscar Hembras, Machos o Ambos');
+await db.query(`update perros set busca = 'Ambos' where id in ($1, $2)`, [perros[A], perros[B]]);
+await db.query(`update perros set sexo = null where id = $1`, [perros[A]]);
 ok(await fails_(A, `update perros set sexo = 'Otro' where id = '${perros[A]}'`), 'El sexo solo puede ser Macho o Hembra');
 
 // Likes, súper hueso y match

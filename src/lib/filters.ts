@@ -29,7 +29,6 @@ export function activeFilters(f: Filters, plus = true): number {
   return (
     Number(f.maxKm !== DEFAULT_FILTERS.maxKm) +
     Number(f.sizes.length < 3) +
-    Number(f.sexes.length > 0) +
     (plus ? Number(f.ages.length > 0) + Number(f.energies.length > 0) + Number(f.breeds.length > 0) : 0)
   );
 }

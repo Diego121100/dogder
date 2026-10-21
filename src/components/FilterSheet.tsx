@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BreedPicker } from './BreedPicker';
 import { Button } from './ui';
 import { PlusBadge } from './PlusPrompt';
+import { SEEKING, Seeking } from './Choices';
 import { DEFAULT_FILTERS, ENERGY_NAMES, fetchNearby, Filters } from '@/lib/discover';
 import { AGE_GROUPS, DISTANCES } from '@/lib/filters';
 import { fonts, radius, useColors } from '@/theme';
@@ -30,27 +31,31 @@ export const stripAdvanced = (f: Filters): Filters => ({ ...f, ages: [], energie
  */
 export function FilterSheet({
   initial,
+  seeking: initialSeeking,
   plus,
   onClose,
   onApply,
   onUpsell,
 }: {
   initial: Filters;
+  /** A quién busca mi perro (se guarda en su perfil). */
+  seeking: Seeking;
   /** Edad, energía y razas son de Dogder Plus. */
   plus: boolean;
   onClose: () => void;
-  onApply: (f: Filters) => void;
+  onApply: (f: Filters, seeking: Seeking) => void;
   onUpsell: () => void;
 }) {
   const c = useColors();
   const [f, setF] = useState<Filters>(plus ? initial : stripAdvanced(initial));
   const [count, setCount] = useState<number | null>(null);
+  const [seeking, setSeeking] = useState<Seeking>(initialSeeking);
 
   // Cuenta en vivo cuántos perros coinciden (con una pequeña espera para no saturar).
   useEffect(() => {
     let alive = true;
     const t = setTimeout(() => {
-      fetchNearby(f)
+      fetchNearby(f, seeking)
         .then((d) => alive && setCount(d.length))
         .catch(() => alive && setCount(null));
     }, 300);
@@ -58,7 +63,7 @@ export function FilterSheet({
       alive = false;
       clearTimeout(t);
     };
-  }, [f]);
+  }, [f, seeking]);
 
   const chip = (label: string, on: boolean, onPress: () => void, sub?: string, key?: string) => (
     <Pressable key={key ?? label} onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked: on }}
@@ -79,7 +84,7 @@ export function FilterSheet({
             <Text style={[styles.headerBtn, { color: c.ink }]}>Cerrar</Text>
           </Pressable>
           <Text style={[styles.title, { color: c.ink }]}>Filtros</Text>
-          <Pressable onPress={() => setF(DEFAULT_FILTERS)} accessibilityRole="button" hitSlop={10}>
+          <Pressable onPress={() => setF({ ...DEFAULT_FILTERS })} accessibilityRole="button" hitSlop={10}>
             <Text style={[styles.headerBtn, { color: c.ink, textDecorationLine: 'underline' }]}>Limpiar</Text>
           </Pressable>
         </View>
@@ -93,11 +98,9 @@ export function FilterSheet({
           </View>
 
           <View style={styles.group}>
-            <Label>Macho o hembra</Label>
+            <Label>Mostrarme</Label>
             <View style={styles.wrap}>
-              {chip('Todos', f.sexes.length === 0, () => setF({ ...f, sexes: [] }))}
-              {chip('♂ Macho', f.sexes.length === 1 && f.sexes[0] === 'Macho', () => setF({ ...f, sexes: ['Macho'] }))}
-              {chip('♀ Hembra', f.sexes.length === 1 && f.sexes[0] === 'Hembra', () => setF({ ...f, sexes: ['Hembra'] }))}
+              {SEEKING.map((s) => chip(s.t, seeking === s.v, () => setSeeking(s.v)))}
             </View>
           </View>
 
@@ -162,7 +165,7 @@ export function FilterSheet({
         </ScrollView>
 
         <View style={[styles.footer, { borderTopColor: c.line }]}>
-          <Button title={label} disabled={count === 0} onPress={() => onApply(f)} />
+          <Button title={label} disabled={count === 0} onPress={() => onApply(f, seeking)} />
         </View>
       </SafeAreaView>
     </Modal>

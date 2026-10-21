@@ -5,7 +5,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Button, ErrorText, Field, Row, Screen, Title } from '@/components/ui';
 import { PhotoGallery } from '@/components/PhotoGallery';
 import { BreedPicker } from '@/components/BreedPicker';
-import { EnergyPicker, SexPicker, SizePicker } from '@/components/Choices';
+import { EnergyPicker, SeekingPicker, SexPicker, SizePicker } from '@/components/Choices';
 import { DogDraft, DogErrors, validateDog } from '@/lib/dog';
 import { loadMyProfile, saveDogEdits } from '@/lib/account';
 import { PhotoReviewFailed, PhotosRejected, rejectedMessage } from '@/lib/photos';
@@ -94,6 +94,7 @@ export default function EditDog() {
               error={errors.age} keyboardType="number-pad" maxLength={2} />
           </Row>
           <SexPicker value={dog.sex} onChange={(sex) => set({ sex })} error={errors.sex} />
+          <SeekingPicker value={dog.seeking} onChange={(seeking) => set({ seeking })} error={errors.seeking} />
           <BreedPicker value={dog.breed} onChange={(breed) => set({ breed })} error={errors.breed} />
           <SizePicker value={dog.size} onChange={(size) => set({ size })} />
           <EnergyPicker value={dog.energy} onChange={(energy) => set({ energy })} error={errors.energy} />

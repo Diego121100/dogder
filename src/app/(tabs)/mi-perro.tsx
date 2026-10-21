@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import * as Clipboard from 'expo-clipboard';
 import Svg, { Path } from 'react-native-svg';
 import { Button, Screen, Title } from '@/components/ui';
-import { sexLabel } from '@/components/Choices';
+import { seekingLabel, sexLabel } from '@/components/Choices';
 import { loadMyProfile, MyProfile } from '@/lib/account';
 import { myStatus } from '@/lib/moderation';
 import { myPlan, Plan } from '@/lib/plan';
@@ -87,7 +87,7 @@ export default function MyDogTab() {
               {dog.name} <Text style={[styles.age, { color: c.muted }]}>{dog.age}</Text>
             </Text>
             <View style={styles.chips}>
-              {[dog.sex ? sexLabel(dog.sex) : null, dog.breed, dog.size, ENERGY_NAMES[(dog.energy || 3) - 1]]
+              {[dog.sex ? sexLabel(dog.sex) : null, dog.seeking ? seekingLabel(dog.seeking) : null, dog.breed, dog.size, ENERGY_NAMES[(dog.energy || 3) - 1]]
                 .filter((t): t is string => !!t)
                 .map((t) => (
                   <View key={t} style={[styles.chip, { borderColor: c.line, backgroundColor: c.bg }]}>

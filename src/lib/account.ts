@@ -21,7 +21,7 @@ export async function loadMyProfile(): Promise<MyProfile | null> {
     supabase.from('perfiles').select('nombre, apellido, colonia, creado').eq('id', user.id).single(),
     supabase
       .from('perros')
-      .select('id, nombre, edad, raza, tamano, sexo, energia, bio, fotos(ruta, orden)')
+      .select('id, nombre, edad, raza, tamano, sexo, busca, energia, bio, fotos(ruta, orden)')
       .eq('dueno_id', user.id)
       .order('orden', { referencedTable: 'fotos' })
       .maybeSingle(),
@@ -42,6 +42,7 @@ export async function loadMyProfile(): Promise<MyProfile | null> {
             age: String(d.edad),
             breed: d.raza,
             sex: d.sexo ?? '',
+            seeking: d.busca ?? 'Ambos',
             size: d.tamano,
             energy: d.energia,
             bio: d.bio ?? '',
@@ -68,6 +69,7 @@ export async function saveDogEdits(userId: string, dogId: string, before: string
       raza: d.breed.trim(),
       tamano: d.size,
       sexo: d.sex || null,
+      busca: d.seeking || 'Ambos',
       energia: d.energy,
       bio: d.bio.trim() || `Hola, soy ${d.name.trim()}.`,
     })
